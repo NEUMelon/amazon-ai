@@ -2,6 +2,9 @@
 
 本目录是报告《亚马逊棋博弈搜索算法研究报告（人工智能算法）》对应的全部源代码与实验数据。
 
+- 在线试玩：https://neumelon.github.io/amazon-ai/
+- 报告 PDF：https://neumelon.github.io/amazon-ai/report.pdf
+
 ## 直接玩游戏
 
 双击打开 `game/dist/amazons.html`（提交材料中另附同一文件 `amazons.html`）。它是单文件网页，不需要安装任何软件，也不需要联网。
