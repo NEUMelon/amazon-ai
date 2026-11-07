@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>亚马逊棋 AI 实验台</title>
+<meta name="description" content="亚马逊棋博弈搜索算法研究：α-β 搜索、蒙特卡洛树搜索与自对弈学习的实现与比较">
+<style>
+:root{--bg:#f3efe7;--card:#fff;--ink:#1f2a37;--muted:#5b6573;--accent:#1f3a5f;--line:#e4ddd0}
+@media (prefers-color-scheme:dark){:root{--bg:#171b21;--card:#20262e;--ink:#e6e9ee;--muted:#a3adba;--accent:#8fb3e0;--line:#2f3741}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 -apple-system,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif}
+main{max-width:860px;margin:0 auto;padding:40px 16px 56px}
+h1{font-size:30px;margin:0 0 4px;color:var(--accent)}
+.sub{color:var(--muted);margin:0 0 28px}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:32px}
+.btn{display:inline-block;padding:11px 20px;border-radius:10px;text-decoration:none;font-weight:600;border:1px solid var(--line);color:var(--ink);background:var(--card)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+@media (prefers-color-scheme:dark){.btn.primary{color:#10151b}}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:18px}
+h2{font-size:19px;margin:0 0 10px}
+ul{margin:0;padding-left:20px}
+li{margin:4px 0}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
+.tw{overflow-x:auto}
+footer{color:var(--muted);font-size:13.5px;margin-top:26px}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<h1>亚马逊棋 AI 实验台</h1>
+<p class="sub">人工智能基础导论 第三次作业 · α-β 搜索、蒙特卡洛树搜索与自对弈学习的实现与比较 · 宋宇浩</p>
+<div class="actions">
+<a class="btn primary" href="amazons.html">在线试玩</a>
+<a class="btn" href="report.pdf">下载报告（PDF）</a>
+<a class="btn" href="https://github.com/NEUMelon/amazon-ai">源代码与数据</a>
+</div>
+
+<section>
+<h2>怎么玩</h2>
+<ul>
+<li>选择模式（人机、AI 对 AI、双人）、双方 AI 与思考时间，点击“新局”。</li>
+<li>走一步分三次点击：点击己方的后 → 点击绿色圆点（目的地）→ 点击红色圆点（射箭位置）。</li>
+<li>棋盘上会显示双方领地、AI 的候选着法与主变例；右侧标签页可查看搜索过程、局势曲线与棋谱。</li>
+<li>网页是单个文件，不需要安装，也可以下载后离线打开。</li>
+</ul>
+</section>
+
+<section>
+<h2>主要结果（循环赛，每步 200 ms）</h2>
+<div class="tw"><table>
+<tr><th>智能体</th><th>Elo（相对一步贪心）</th></tr>
+<tr><td>α-β（完整）</td><td>+427</td></tr>
+<tr><td>MCTS（PUCT + 可分离先验）</td><td>+362</td></tr>
+<tr><td>MCTS（学习先验）</td><td>+298</td></tr>
+<tr><td>α-β（Texel 权重）</td><td>+141</td></tr>
+<tr><td>MCTS（UCT + 评估截断）</td><td>+28</td></tr>
+<tr><td>一步贪心</td><td>0</td></tr>
+<tr><td>MCTS（纯随机模拟）</td><td>−771</td></tr>
+</table></div>
+<ul style="margin-top:12px">
+<li>相同思考时间下，α-β 在 50—100 ms 时显著占优，MCTS 在 800 ms 时显著占优。</li>
+<li>着法排序与评估函数对 α-β 影响最大；先验与短模拟对 MCTS 影响最大。</li>
+<li>全部数据来自 2144 局主实验与 384 局重复实验的真实运行记录，详见报告第五章。</li>
+</ul>
+</section>
+
+<footer>本项目在编写代码、运行实验、核验文献与起草报告时使用了生成式 AI 工具（Claude），详见报告 3.7 节。</footer>
+</main>
+</body>
+</html>

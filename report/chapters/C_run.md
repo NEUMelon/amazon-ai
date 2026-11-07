@@ -1,5 +1,9 @@
 # 附录C　运行说明
 
+## 代码仓库与在线试玩 {-}
+
+本项目的全部源代码、原始实验数据与报告源文件公开在 GitHub 仓库 https://github.com/NEUMelon/amazon-ai 中；网页游戏同时通过 GitHub Pages 发布，可在 https://neumelon.github.io/amazon-ai/ 直接在线试玩，页面上也提供报告 PDF 的下载。仓库中只省略了一个可由脚本重新生成的学习中间文件（`data/learn/policy_X.f32`，约 40 MB）。
+
 ## 直接运行游戏 {-}
 
 提交材料中的 `amazons.html` 是一个完全独立的单文件网页（约 160 KB），包含界面、引擎与模型参数，不需要安装任何软件，也不需要网络连接：

@@ -87,6 +87,8 @@ def cover(doc, title):
             tc.append(para([run_xml(txt, 14, font_ea=FONT_S if i else FONT_H, bold=(i == 0))], align='right' if i == 0 else 'center', after=40))
     els.append(tbl)
     els.append(para([run_xml('2026 年 11 月', 14, font_ea=FONT_S)], before=360))
+    els.append(para([run_xml('代码仓库：https://github.com/NEUMelon/amazon-ai', 10, color='3D4B5C', font_ea=FONT_S)], before=160, after=0))
+    els.append(para([run_xml('在线试玩：https://neumelon.github.io/amazon-ai/', 10, color='3D4B5C', font_ea=FONT_S)], before=0))
     return els
 
 def toc_block():
