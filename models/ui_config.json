@@ -1,0 +1,10 @@
+{ "ai_list": [
+  { "id": "ab", "name": "α-β 搜索（PVS + 可分离排序）", "short": "α-β" },
+  { "id": "mcts-puct", "name": "MCTS · PUCT + 可分离先验 + 评估截断", "short": "MCTS-PUCT" },
+  { "id": "mcts-learned", "name": "MCTS · 学习先验", "short": "MCTS-学习", "needPolicy": true },
+  { "id": "ab-tuned", "name": "α-β · Texel 学习权重", "short": "α-β-Texel", "needTuned": true },
+  { "id": "mcts-cutoff", "name": "MCTS · UCT + 评估截断", "short": "MCTS-截断" },
+  { "id": "mcts-pure", "name": "MCTS · 纯随机模拟", "short": "MCTS-纯随机" },
+  { "id": "greedy", "name": "贪心 · 一步评估", "short": "贪心" },
+  { "id": "random", "name": "随机走子", "short": "随机" }
+] }

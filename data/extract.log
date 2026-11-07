@@ -1,0 +1,9 @@
+50 / 400 policy samples 2814
+100 / 400 policy samples 5559
+150 / 400 policy samples 8430
+200 / 400 policy samples 11415
+250 / 400 policy samples 14217
+300 / 400 policy samples 17137
+350 / 400 policy samples 20142
+400 / 400 policy samples 22940
+games 400; policy samples 22940 (coverage 92.4% in top-40); texel positions 26025

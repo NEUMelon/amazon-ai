@@ -1,0 +1,8 @@
+ab mean regret 0.14 same 25
+mcts-puct mean regret 0.66 same 11
+mcts-cutoff mean regret 1.19 same 8
+mcts-learned mean regret 0.76 same 9
+ab-tuned mean regret 0.67 same 19
+ab-cheapOrder mean regret -5.23 same 13
+mcts-pure mean regret 2.78 same 3
+greedy mean regret -1.61 same 6

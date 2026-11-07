@@ -1,0 +1,7 @@
+digraph G { rankdir=LR; dpi=220; nodesep=0.25; ranksep=0.4;
+ node [fontname="Noto Sans CJK SC", fontsize=9.5, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#4B5563"]; edge [fontname="Noto Sans CJK SC", fontsize=8.5, color="#4B5563", arrowsize=0.7];
+ op [label="make_openings.js\n均衡开局 32 个\n（0–15 正式，16–31 试调）"]; sp [label="自对弈 400 局\n（α-β，200 ms/步）"]; lr [label="学习\n策略·Texel"]; mj [label="make_jobs.js\n任务清单 2144 局"];
+ rn [label="runner.js\n4 进程并行·断点续跑"]; js [label="main.jsonl\n逐局记录", shape=cylinder, fillcolor="#F3F4F6"]; tc [label="效率·决策质量\n方差测试"]; an [label="analyze.py\nElo·区间·表格"];
+ fg [label="figscripts\n图表"]; md [label="章节 Markdown\n（::include 表格\n::src 代码）"]; bd [label="build.py → pandoc\n→ postprocess → LibreOffice"]; out [label="Word + PDF", shape=note, fillcolor="#E8EEF6"];
+ op -> mj; sp -> lr; lr -> mj [label="模型参数"]; mj -> rn -> js -> an -> md; js -> fg; tc -> fg; tc -> md; an -> fg -> md -> bd -> out;
+}

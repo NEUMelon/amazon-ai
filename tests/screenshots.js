@@ -1,0 +1,82 @@
+'use strict';
+// 报告用界面截图（Playwright + Chromium，file:// 打开打包后的单文件网页）：node tests/screenshots.js
+const { chromium } = require('playwright');
+const path = require('path'), fs = require('fs');
+const OUT = path.join(__dirname, '../report/figures');
+const URL = 'file://' + path.join(__dirname, '../game/dist/amazons.html');
+const setThink = (page, i) => page.$eval('#think', (e, v) => { e.value = v; e.dispatchEvent(new Event('input')); }, String(i));
+const waitLen = (page, n, t = 120000) => page.waitForFunction(k => window.__amazons.board.history.length >= k && !window.__amazons.busy, n, { timeout: t });
+const layer = (page, id, on) => page.$eval('#' + id, (e, on) => { if (e.checked !== on) e.click(); }, on);
+(async () => {
+  const browser = await chromium.launch();
+  const errors = [];
+  const info = {};
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('pageerror', e => errors.push(String(e)));
+  await page.goto(URL); await page.waitForTimeout(400);
+  await page.screenshot({ path: path.join(OUT, 'ui_start.png') });
+  // AI 对 AI：白 α-β，黑 MCTS-PUCT，思考 1 s
+  await page.selectOption('#mode', 'aa');
+  await page.selectOption('#aiWhite', 'ab');
+  await page.selectOption('#aiBlack', 'mcts-puct');
+  await setThink(page, 3);
+  await page.selectOption('#opening', 'empty');
+  for (const id of ['lyTerr', 'lySearch', 'lyPV']) await layer(page, id, true);
+  await page.click('#btnNew');
+  // 黑方（MCTS）刚走完第 10 手
+  await waitLen(page, 10); await page.click('#btnPause'); await page.waitForTimeout(500);
+  await page.screenshot({ path: path.join(OUT, 'ui_mcts.png') });
+  info.mcts = await page.evaluate(() => window.__amazons.board.history.map(window.__amazons.G.moveToStr));
+  await page.click('#btnPause'); await waitLen(page, 11); await page.click('#btnPause'); await page.waitForTimeout(500);
+  await page.screenshot({ path: path.join(OUT, 'ui_ab.png') });
+  info.ab = await page.evaluate(() => window.__amazons.board.history.map(window.__amazons.G.moveToStr));
+  await page.click('button[data-tab="tTerr"]'); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(OUT, 'ui_terr.png') });
+  await page.click('button[data-tab="tSearch"]');
+  // 距离数字图层
+  await layer(page, 'lyDist', true); await layer(page, 'lySearch', false); await layer(page, 'lyPV', false); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(OUT, 'ui_dist.png') });
+  await layer(page, 'lyDist', false); await layer(page, 'lySearch', true); await layer(page, 'lyPV', true);
+  await page.click('#btnPause');
+  await page.waitForFunction(() => window.__amazons.board.isOver(), null, { timeout: 600000 });
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: path.join(OUT, 'ui_end.png') });
+  if (await page.isVisible('#modalClose')) await page.click('#modalClose');
+  await page.click('button[data-tab="tCurve"]'); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(OUT, 'ui_curve.png') });
+  await page.click('button[data-tab="tRecord"]'); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(OUT, 'ui_record.png') });
+  await page.click('button[data-tab="tAbout"]'); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(OUT, 'ui_about.png') });
+  info.demo = await page.evaluate(() => ({ moves: window.__amazons.board.history.map(window.__amazons.G.moveToStr), winner: window.__amazons.board.winner }));
+  console.log('demo game', info.demo.moves.length, 'winner', info.demo.winner);
+  // 人机：玩家执白，AI 为 α-β；展示三步点击中的走法提示
+  await page.click('button[data-tab="tSearch"]');
+  await page.selectOption('#mode', 'hw'); await page.selectOption('#aiBlack', 'ab'); await setThink(page, 1);
+  await layer(page, 'lySearch', false); await layer(page, 'lyPV', false);
+  await page.click('#btnNew'); await page.waitForTimeout(300);
+  const box = await page.locator('#board').boundingBox();
+  const off = box.width * 0.06, cell = (box.width - 2 * off) / 10;
+  const click = async sq => { const c = sq.charCodeAt(0) - 97, r = 10 - +sq.slice(1); await page.mouse.click(box.x + off + cell * (c + 0.5), box.y + off + cell * (r + 0.5)); await page.waitForTimeout(80); };
+  await click('d1'); await page.waitForTimeout(200);
+  await page.screenshot({ path: path.join(OUT, 'ui_select1.png') });
+  await click('d7'); await page.waitForTimeout(200);
+  await page.screenshot({ path: path.join(OUT, 'ui_select2.png') });
+  await click('g7'); await waitLen(page, 2, 20000); await page.waitForTimeout(300);
+  await page.click('#btnHint'); await page.waitForFunction(() => !window.__amazons.busy, null, { timeout: 20000 }); await page.waitForTimeout(800);
+  await layer(page, 'lyPV', true); await layer(page, 'lySearch', true); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(OUT, 'ui_hint.png') });
+  // 手机竖屏布局
+  const m = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  m.on('pageerror', e => errors.push(String(e)));
+  await m.goto(URL); await m.waitForTimeout(300);
+  await m.selectOption('#mode', 'aa'); await m.$eval('#think', e => { e.value = '0'; e.dispatchEvent(new Event('input')); });
+  await m.click('#btnNew'); await m.waitForFunction(() => window.__amazons.board.history.length >= 12, null, { timeout: 60000 });
+  await m.click('#btnPause'); await m.evaluate(() => window.scrollTo(0, 0)); await m.waitForTimeout(500);
+  await m.screenshot({ path: path.join(OUT, 'ui_mobile.png'), fullPage: false });
+  info.errors = errors;
+  fs.writeFileSync(path.join(__dirname, '../data/screenshots.json'), JSON.stringify(info, null, 1));
+  console.log('errors:', errors.length ? errors : 'none');
+  await browser.close();
+})();

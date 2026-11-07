@@ -1,0 +1,19 @@
+digraph G {
+  rankdir=TB; dpi=220; nodesep=0.35; ranksep=0.45; newrank=true;
+  node [fontname="Noto Sans CJK SC", fontsize=10.5, shape=box, style="rounded,filled", color="#4B5563", fillcolor="#FFFFFF"];
+  edge [color="#4B5563", arrowsize=0.7, fontname="Noto Sans CJK SC", fontsize=9];
+  subgraph cluster_k { label="知识层（core.js / eval.js / movegen.js）"; fontname="Noto Sans CJK SC"; color="#9CA3AF"; style=rounded;
+    k1 [label="棋盘表示·射线表\n走法生成·Zobrist 哈希"]; k2 [label="后距离 / 王距离\n（BFS）"]; k3 [label="领地评估 E(s)\nt1 t2 c1 c2 移动性·阶段插值"]; k4 [label="着法排序\n廉价分数 / 可分离评估"]; k1 -> k2 -> k3 -> k4; }
+  subgraph cluster_s { label="搜索层"; fontname="Noto Sans CJK SC"; color="#9CA3AF"; style=rounded;
+    ab [label="α-β 搜索\nPVS·迭代加深·置换表\n杀手/历史·束宽剪枝", fillcolor="#E8EEF6", color="#1F4E79"];
+    mc [label="MCTS\nUCT/PUCT·渐进展开\n可分离先验·评估截断", fillcolor="#FBEFE7", color="#C2571A"];
+    fl [label="分隔检测 + 共用填格策略", fillcolor="#F3E8F7", color="#6A4C93"]; }
+  subgraph cluster_l { label="学习层（Python 离线训练）"; fontname="Noto Sans CJK SC"; color="#9CA3AF"; style=rounded;
+    sp [label="α-β 自对弈\n400 局棋谱"]; lp [label="线性 softmax\n走子策略", fillcolor="#E9F3EA", color="#2E7D32"]; lt [label="Texel 评估\n权重调参", fillcolor="#E9F3EA", color="#2E7D32"]; sp -> lp; sp -> lt; }
+  subgraph cluster_e { label="评价与展示"; fontname="Noto Sans CJK SC"; color="#9CA3AF"; style=rounded;
+    ex [label="配对开局对局实验\n循环赛·消融·缩放"]; st [label="Elo（Bradley–Terry）\nWilson·自助法"]; sp2 [label="决策质量·搜索效率\n离线学习指标"]; ui [label="网页界面\n决策过程可视化"]; }
+  k4 -> ab; k4 -> mc; k3 -> fl; fl -> ab [label="分隔后接管"]; fl -> mc;
+  ab -> sp; lp -> mc [label="先验 P(s,a)"]; lt -> ab [label="评估权重"]; lt -> mc [label="尺度 k"];
+  ab -> ex [style=dashed]; mc -> ex [style=dashed]; ex -> st; ab -> sp2 [style=dashed]; mc -> sp2 [style=dashed];
+  ab -> ui; mc -> ui;
+}

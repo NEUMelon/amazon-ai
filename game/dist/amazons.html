@@ -1,0 +1,3340 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>亚马逊棋 AI 实验台</title>
+<style>:root {
+  --bg: #f4f1ea;
+  --panel: #ffffff;
+  --ink: #1f2430;
+  --muted: #6b7280;
+  --line: #e5e0d5;
+  --accent: #1f4e79;
+  --accent-2: #c0392b;
+  --good: #2e7d32;
+  --wood-1: #e9c98f;
+  --wood-2: #d8b072;
+  --shadow: 0 1px 2px rgba(31, 36, 48, .06), 0 6px 20px rgba(31, 36, 48, .06);
+  --radius: 14px;
+  font-family: "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { min-height: 100vh; }
+button, select, input, textarea { font: inherit; color: inherit; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 28px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand h1 { font-size: 20px; margin: 0; letter-spacing: .5px; }
+.brand p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
+.logo { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #efe3c8, #c9b48a);
+  position: relative; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; font-size: 26px; color: #2b3440; }
+.status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: #fbfaf7; }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+.status.busy .dot { background: #e6a700; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+
+.layout { display: grid; grid-template-columns: minmax(320px, 1fr) 420px; gap: 24px; padding: 24px 28px; max-width: 1360px; margin: 0 auto; }
+@media (max-width: 1020px) { .layout { grid-template-columns: 1fr; padding: 16px; } }
+
+.board-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.board-wrap { position: relative; width: 100%; max-width: 760px; margin: 0 auto; aspect-ratio: 1 / 1; }
+#board { width: 100%; height: 100%; display: block; border-radius: 10px; box-shadow: 0 10px 30px rgba(20, 30, 45, .3); cursor: pointer; touch-action: manipulation; }
+.thinking { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; border-radius: 999px; background: rgba(31,36,48,.85); color: #fff; font-size: 13px; pointer-events: none; }
+.spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.board-bar { display: flex; align-items: center; justify-content: space-between; max-width: 760px; width: 100%; margin: 0 auto; gap: 12px; flex-wrap: wrap; }
+.players { display: flex; align-items: center; gap: 14px; }
+.pl { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-width: 150px; }
+.pl.turn { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(31,78,121,.12); }
+.pl b { display: block; font-size: 14px; }
+.pl small { color: var(--muted); font-size: 12px; }
+.stone { width: 20px; height: 20px; border-radius: 50%; display: inline-block; flex: none; }
+.stone.b { background: radial-gradient(circle at 35% 30%, #666, #0d0d0d); }
+.stone.w { background: radial-gradient(circle at 35% 30%, #fff, #d4d4d4); box-shadow: 0 0 0 1px rgba(0,0,0,.18); }
+.vs { color: var(--muted); font-weight: 600; font-size: 12px; }
+.movecount { color: var(--muted); font-size: 13px; }
+.movecount b { color: var(--ink); font-size: 16px; }
+.layers { display: flex; flex-wrap: wrap; gap: 6px 16px; max-width: 760px; width: 100%; margin: 0 auto; font-size: 13px; color: var(--muted); align-items: center; }
+.layers .lbl { font-weight: 600; color: var(--ink); }
+.layers label { display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+
+.panel { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; }
+.card h2 { font-size: 15px; margin: 0 0 12px; }
+.row { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13.5px; }
+.row label { color: var(--muted); }
+.row select { grid-column: 2 / 4; }
+select, textarea { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fbfaf7; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+output { font-variant-numeric: tabular-nums; font-size: 13px; min-width: 52px; text-align: right; }
+.btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 6px; }
+.btns.small { grid-template-columns: repeat(3, 1fr); margin-top: 10px; }
+button { border: 1px solid var(--line); background: #fbfaf7; border-radius: 9px; padding: 8px 6px; cursor: pointer; font-size: 13.5px; transition: background .15s, border-color .15s; }
+button:hover { border-color: #cfc6b3; background: #f3efe6; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover { background: #193f62; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: -4px -4px 12px; }
+.tab { border: none; background: none; padding: 8px 10px; border-radius: 8px 8px 0 0; color: var(--muted); font-weight: 600; font-size: 13px; }
+.tab.active { color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+.tabpane { display: none; }
+.tabpane.active { display: block; }
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.kpis div { background: #faf8f3; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.kpis small { display: block; color: var(--muted); font-size: 11.5px; }
+.kpis b { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.reason { margin: 10px 0 8px; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: #eef3f8; color: #23415f; }
+.reason.win { background: #fdecea; color: #8e2a1f; }
+.pv { font-size: 13px; }
+.pv small { color: var(--muted); }
+#kPV { font-family: "JetBrains Mono", Consolas, monospace; font-size: 12.5px; word-break: break-all; margin-top: 2px; }
+.tablewrap { max-height: 260px; overflow: auto; margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+th, td { padding: 5px 8px; text-align: right; border-bottom: 1px solid #f0ece3; white-space: nowrap; }
+th { position: sticky; top: 0; background: #faf8f3; color: var(--muted); font-weight: 600; }
+td:first-child, th:first-child { text-align: left; }
+.bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--accent); vertical-align: middle; opacity: .75; }
+#curve { width: 100%; display: block; }
+.note { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.record { columns: 3; font-family: "JetBrains Mono", Consolas, monospace; font-size: 12.5px; max-height: 260px; overflow: auto; margin: 0; padding-left: 28px; }
+.record li.b::marker { color: #111; }
+.record li.w::marker { color: #999; }
+.record li.cur { font-weight: 700; color: var(--accent-2); }
+textarea { margin-top: 10px; min-height: 70px; font-family: monospace; font-size: 12.5px; }
+.about h3 { font-size: 13.5px; margin: 10px 0 4px; color: var(--accent); }
+.about p { font-size: 13px; line-height: 1.7; margin: 0 0 6px; }
+
+.modal { position: fixed; inset: 0; background: rgba(20, 22, 28, .45); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+.modal[hidden], .thinking[hidden] { display: none; }
+.modal-card { background: var(--panel); border-radius: 16px; padding: 22px 24px; width: min(380px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.modal-card h3 { margin: 0 0 8px; }
+.modal-card p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+.modal-card .btns { grid-template-columns: 1fr 1fr; }
+.howto { max-width: 760px; width: 100%; margin: 0 auto; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.iters { text-align: left !important; white-space: normal !important; color: var(--muted); font-size: 12px; line-height: 1.5; }
+table.mob { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; }
+.record li.w::marker { color: #2a62c9; }
+.record li.b::marker { color: #111; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">♛</div>
+    <div>
+      <h1>亚马逊棋 AI 实验台</h1>
+      <p>α-β 搜索 · 蒙特卡洛树搜索 · 领地评估 · 自对弈学习</p>
+    </div>
+  </div>
+  <div class="status" id="status"><span class="dot"></span><span id="statusText">准备就绪</span></div>
+</header>
+
+<main class="layout">
+  <section class="board-col">
+    <div class="board-wrap" id="boardWrap">
+      <canvas id="board" aria-label="10×10 亚马逊棋棋盘"></canvas>
+      <div class="thinking" id="thinking" hidden><div class="spinner"></div><span id="thinkingText">AI 思考中…</span></div>
+    </div>
+    <div class="board-bar">
+      <div class="players">
+        <div class="pl" id="plWhite"><i class="stone w"></i><div><b id="nameWhite">玩家</b><small>白方先行</small></div></div>
+        <div class="vs">VS</div>
+        <div class="pl" id="plBlack"><i class="stone b"></i><div><b id="nameBlack">AI</b><small>黑方</small></div></div>
+      </div>
+      <div class="movecount">第 <b id="moveNo">0</b> 手</div>
+    </div>
+    <div class="layers">
+      <span class="lbl">棋盘图层</span>
+      <label><input type="checkbox" id="lyTerr" checked> 领地（后距离）</label>
+      <label><input type="checkbox" id="lySearch" checked> 搜索候选</label>
+      <label><input type="checkbox" id="lyPV" checked> 主变例</label>
+      <label><input type="checkbox" id="lyDist"> 距离数字</label>
+      <label><input type="checkbox" id="lyNum"> 箭的手数</label>
+    </div>
+    <p class="howto">走法：① 点击己方的后 → ② 点击绿色圆点（目的地）→ ③ 点击红色圆点（射箭位置）。右键或 Esc 取消。蓝色/红色底纹分别表示白方/黑方的“领地”（该方的后能更快到达的空格）。</p>
+  </section>
+
+  <aside class="panel">
+    <div class="card">
+      <h2>对局设置</h2>
+      <div class="row">
+        <label for="mode">模式</label>
+        <select id="mode">
+          <option value="hw">人机对弈（我执白先行）</option>
+          <option value="hb">人机对弈（我执黑）</option>
+          <option value="aa">AI 对 AI 演示</option>
+          <option value="hh">双人对弈 / 分析</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="aiWhite">白方 AI</label>
+        <select id="aiWhite" class="aisel"></select>
+      </div>
+      <div class="row">
+        <label for="aiBlack">黑方 AI</label>
+        <select id="aiBlack" class="aisel"></select>
+      </div>
+      <div class="row">
+        <label for="think">思考时间</label>
+        <input type="range" id="think" min="0" max="6" step="1" value="3">
+        <output id="thinkOut">1.0 秒</output>
+      </div>
+      <div class="row">
+        <label for="opening">开局</label>
+        <select id="opening">
+          <option value="empty">标准初始局面</option>
+          <option value="random">随机均衡开局（双方各走一步）</option>
+        </select>
+      </div>
+      <div class="btns">
+        <button id="btnNew" class="primary">新 局</button>
+        <button id="btnUndo">悔 棋</button>
+        <button id="btnHint">提 示</button>
+        <button id="btnPause">暂 停</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="tSearch" role="tab">搜索过程</button>
+        <button class="tab" data-tab="tTerr" role="tab">领地</button>
+        <button class="tab" data-tab="tCurve" role="tab">局势曲线</button>
+        <button class="tab" data-tab="tRecord" role="tab">棋谱</button>
+        <button class="tab" data-tab="tAbout" role="tab">算法说明</button>
+      </div>
+      <div class="tabpane active" id="tSearch">
+        <div class="kpis">
+          <div><small>算法</small><b id="kAlgo">—</b></div>
+          <div><small>深度 / 模拟次数</small><b id="kDepth">—</b></div>
+          <div><small>结点数</small><b id="kNodes">—</b></div>
+          <div><small>速度</small><b id="kNps">—</b></div>
+          <div><small>用时</small><b id="kTime">—</b></div>
+          <div><small>局势（AI 视角）</small><b id="kEval">—</b></div>
+        </div>
+        <div class="reason" id="kReason">尚未开始搜索。</div>
+        <div class="pv"><small>主变例</small><div id="kPV">—</div></div>
+        <div class="tablewrap"><table id="searchTable"><thead></thead><tbody></tbody></table></div>
+      </div>
+      <div class="tabpane" id="tTerr">
+        <div id="terrStats"></div>
+        <p class="note">领地按后距离划分：某空格离哪一方的后更近（后的走法步数更少），就记为哪一方的领地。这正是评估函数中 t1 项的含义。双方没有任何共同可达的空格、且敌对的后也不相邻时称为“已分隔”，此后比的是各自区域的大小。</p>
+      </div>
+      <div class="tabpane" id="tCurve">
+        <canvas id="curve" height="190"></canvas>
+        <p class="note">纵轴为 AI 估计的白方胜率。α-β 的评估值 v（单位：格）按 σ(k·v) 换算（k 由 Texel 拟合得到），MCTS 直接取根结点最佳子结点的平均回报；人类着法沿用上一个估计。</p>
+      </div>
+      <div class="tabpane" id="tRecord">
+        <ol id="record" class="record"></ol>
+        <div class="btns small">
+          <button id="btnExport">导出棋谱</button>
+          <button id="btnImport">导入棋谱</button>
+          <button id="btnCopy">复制坐标</button>
+        </div>
+        <textarea id="importBox" placeholder="粘贴着法序列，例如：d1-d7/g7 a7-c5/c2 …" hidden></textarea>
+      </div>
+      <div class="tabpane about" id="tAbout">
+        <h3>规则</h3>
+        <p>10×10 棋盘，双方各有四个“后”。每一步先像国际象棋的后一样沿直线或斜线移动一个己方的后（不能越过任何障碍），再从落点像后一样射出一支箭，箭落下的格子永久封死。轮到某方时若无路可走，该方判负。白方先行。</p>
+        <h3>领地评估</h3>
+        <p>计算双方的“后距离”和“王距离”，统计谁能更快到达每个空格（t1、t2），再加上位置项（c1、c2）和机动性。各项权重随“剩余争夺量” w 线性变化（Lieberum 2005 的框架），可以用 Texel 方法从对局结果中拟合。</p>
+        <h3>α-β 搜索</h3>
+        <p>迭代加深的负极大值 α-β，配合置换表、杀手着法、历史启发与主变例搜索。合法走法太多（开局 2176 个），因此每个结点只搜索排序最靠前的少数走法；排序采用“可分离评估”：分别评估“只移动后”和“只放箭”，两者相加作为整步的近似分数。</p>
+        <h3>蒙特卡洛树搜索</h3>
+        <p>选择—扩展—模拟—回传。纯随机版本把棋随机下到终局；增强版本只随机走几步，再用评估函数估计胜率（评估截断），并按启发式顺序渐进地展开子结点；PUCT 版本还用启发式或学习得到的走法概率作为先验。</p>
+        <h3>填格阶段</h3>
+        <p>双方被箭完全隔开后，胜负取决于各自区域的大小。此时所有 AI 都使用同一个填格策略：每步选择使己方仍可到达的空格数最多的走法。</p>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-card">
+    <h3 id="modalTitle">对局结束</h3>
+    <p id="modalText"></p>
+    <div class="btns"><button id="modalNew" class="primary">再来一局</button><button id="modalClose">查看棋局</button></div>
+  </div>
+</div>
+
+<script>/* AmazonsAI engine bundle — generated by game/build.js */
+(function (global) {
+"use strict";
+const __mods = {};
+const __cache = {};
+function require(name) { const k = name.replace(/^\.\//, "").replace(/^\.\.\/engine\//, ""); if (__cache[k]) return __cache[k].exports; const m = { exports: {} }; __cache[k] = m; __mods[k](m, m.exports, require); return m.exports; }
+__mods["core.js"] = function (module, exports, require) {
+'use strict';
+/*
+ * core.js —— 10×10 亚马逊棋的棋盘表示、走法生成与距离计算
+ *
+ * 规则要点：
+ *   1. 双方各有 4 个“亚马逊”（后），白方先行；
+ *   2. 一步棋 = 移动一个己方的后（像国际象棋的后一样沿 8 个方向直线移动任意格，不能越过任何棋子或障碍）
+ *      + 从落点再像后一样射出一支“箭”，箭落的格子永久成为障碍；
+ *   3. 轮到某方时若无合法走法，该方判负（不存在和棋）。
+ *
+ * 表示：格点编号 idx = r * 10 + c，r = 0 为最上一行（第 10 行），c = 0 为 a 列。
+ *       cells[idx]：0 空，1 白后，2 黑后，3 箭（障碍）。
+ *       一步棋编码为整数 from * 10000 + to * 100 + arrow，字符串形如 "d1-d7/g7"。
+ */
+const N = 10, NN = 100;
+const EMPTY = 0, WHITE = 1, BLACK = 2, ARROW = 3;
+const DIRS = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+const INF = 99;
+
+// 射线表：RAYS[idx][d] = 从 idx 出发沿方向 d 依次经过的格点（不含 idx）
+const RAYS = [];
+const NEIGH = [];          // 8 邻域
+for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+  const rays = [], nb = [];
+  for (const [dr, dc] of DIRS) {
+    const ray = [];
+    let rr = r + dr, cc = c + dc;
+    while (rr >= 0 && rr < N && cc >= 0 && cc < N) { ray.push(rr * N + cc); rr += dr; cc += dc; }
+    rays.push(ray);
+    if (ray.length) nb.push(ray[0]);
+  }
+  RAYS.push(rays); NEIGH.push(nb);
+}
+
+// Zobrist 随机数（两段 32 位，避免 JS 位运算的 53 位限制）
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const zr = mulberry32(20241107);
+const ZLO = [], ZHI = [];
+for (let i = 0; i < NN * 4; i++) { ZLO.push((zr() * 4294967296) >>> 0); ZHI.push((zr() * 4294967296) >>> 0); }
+const ZSIDE_LO = (zr() * 4294967296) >>> 0, ZSIDE_HI = (zr() * 4294967296) >>> 0;
+
+const COLS = 'abcdefghij';
+const sqToStr = i => COLS[i % N] + (N - ((i / N) | 0));
+function strToSq(s) {
+  const c = COLS.indexOf(s[0].toLowerCase()), row = parseInt(s.slice(1), 10);
+  if (c < 0 || !(row >= 1 && row <= N)) throw new Error('bad square ' + s);
+  return (N - row) * N + c;
+}
+const mFrom = m => (m / 10000) | 0, mTo = m => ((m / 100) | 0) % 100, mArrow = m => m % 100;
+const mk = (f, t, a) => f * 10000 + t * 100 + a;
+const moveToStr = m => `${sqToStr(mFrom(m))}-${sqToStr(mTo(m))}/${sqToStr(mArrow(m))}`;
+function parseMove(s) {
+  const m = /^([a-j]\d{1,2})-([a-j]\d{1,2})\/([a-j]\d{1,2})$/i.exec(s.trim());
+  if (!m) throw new Error('bad move ' + s);
+  return mk(strToSq(m[1]), strToSq(m[2]), strToSq(m[3]));
+}
+
+const START_WHITE = ['a4', 'd1', 'g1', 'j4'].map(strToSq);
+const START_BLACK = ['a7', 'd10', 'g10', 'j7'].map(strToSq);
+
+class Board {
+  constructor() {
+    this.cells = new Int8Array(NN);
+    this.queens = [null, START_WHITE.slice(), START_BLACK.slice()];
+    for (const q of this.queens[WHITE]) this.cells[q] = WHITE;
+    for (const q of this.queens[BLACK]) this.cells[q] = BLACK;
+    this.side = WHITE;
+    this.history = [];
+    this.hashLo = 0; this.hashHi = 0;
+    for (let i = 0; i < NN; i++) if (this.cells[i]) { this.hashLo ^= ZLO[i * 4 + this.cells[i]]; this.hashHi ^= ZHI[i * 4 + this.cells[i]]; }
+  }
+  static fromMoves(list) {
+    const b = new Board();
+    for (const s of list) {
+      const m = typeof s === 'number' ? s : parseMove(s);
+      if (!b.isLegal(m)) throw new Error('illegal move ' + (typeof s === 'number' ? moveToStr(s) : s));
+      b.play(m);
+    }
+    return b;
+  }
+  clone() {
+    const b = Object.create(Board.prototype);
+    b.cells = this.cells.slice(); b.queens = [null, this.queens[1].slice(), this.queens[2].slice()];
+    b.side = this.side; b.history = this.history.slice(); b.hashLo = this.hashLo; b.hashHi = this.hashHi;
+    return b;
+  }
+  get arrows() { return this.history.length; }
+  _set(i, v) {
+    const old = this.cells[i];
+    if (old) { this.hashLo ^= ZLO[i * 4 + old]; this.hashHi ^= ZHI[i * 4 + old]; }
+    this.cells[i] = v;
+    if (v) { this.hashLo ^= ZLO[i * 4 + v]; this.hashHi ^= ZHI[i * 4 + v]; }
+  }
+  play(m) {
+    const f = mFrom(m), t = mTo(m), a = mArrow(m), s = this.side;
+    const qs = this.queens[s]; qs[qs.indexOf(f)] = t;
+    this._set(f, EMPTY); this._set(t, s); this._set(a, ARROW);
+    this.history.push(m);
+    this.side = 3 - s; this.hashLo ^= ZSIDE_LO; this.hashHi ^= ZSIDE_HI;
+  }
+  undo() {
+    const m = this.history.pop();
+    const f = mFrom(m), t = mTo(m), a = mArrow(m), s = 3 - this.side;
+    this.side = s; this.hashLo ^= ZSIDE_LO; this.hashHi ^= ZSIDE_HI;
+    this._set(a, EMPTY); this._set(t, EMPTY); this._set(f, s);
+    const qs = this.queens[s]; qs[qs.indexOf(t)] = f;
+  }
+  lastMove() { return this.history.length ? this.history[this.history.length - 1] : -1; }
+  // 某方是否还有合法走法：只要某个后旁边有空格，就可以走一步再把箭射回原处
+  canMove(side = this.side) {
+    for (const q of this.queens[side]) for (const n of NEIGH[q]) if (this.cells[n] === EMPTY) return true;
+    return false;
+  }
+  isOver() { return !this.canMove(this.side); }
+  get winner() { return this.isOver() ? 3 - this.side : 0; }
+  // 一个后从 q 出发一步能到达的空格（目的地）
+  queenTargets(q, out = []) {
+    const rays = RAYS[q], cells = this.cells;
+    for (let d = 0; d < 8; d++) { const ray = rays[d]; for (let k = 0; k < ray.length; k++) { const x = ray[k]; if (cells[x] !== EMPTY) break; out.push(x); } }
+    return out;
+  }
+  // 全部合法走法（整数编码）。开局时约 2176 步
+  genMoves(side = this.side) {
+    const out = [], cells = this.cells;
+    for (const f of this.queens[side]) {
+      cells[f] = EMPTY;                                   // 射箭时原位置已空出
+      const rays = RAYS[f];
+      for (let d = 0; d < 8; d++) {
+        const ray = rays[d];
+        for (let k = 0; k < ray.length; k++) {
+          const t = ray[k]; if (cells[t] !== EMPTY) break;
+          const base = f * 10000 + t * 100, rt = RAYS[t];
+          for (let e = 0; e < 8; e++) { const r2 = rt[e]; for (let j = 0; j < r2.length; j++) { const a = r2[j]; if (cells[a] !== EMPTY) break; out.push(base + a); } }
+        }
+      }
+      cells[f] = side;
+    }
+    return out;
+  }
+  countMoves(side = this.side) {
+    let n = 0; const cells = this.cells;
+    for (const f of this.queens[side]) {
+      cells[f] = EMPTY;
+      for (const ray of RAYS[f]) for (const t of ray) { if (cells[t] !== EMPTY) break; for (const r2 of RAYS[t]) for (const a of r2) { if (cells[a] !== EMPTY) break; n++; } }
+      cells[f] = side;
+    }
+    return n;
+  }
+  isLegal(m) {
+    if (!(m >= 0)) return false;
+    const f = mFrom(m), t = mTo(m), a = mArrow(m);
+    if (f >= NN || t >= NN || a >= NN || this.cells[f] !== this.side || this.isOver()) return false;
+    if (!this._reach(f, t)) return false;
+    this.cells[f] = EMPTY; const ok = this._reach(t, a); this.cells[f] = this.side;
+    return ok;
+  }
+  _reach(f, t) {
+    for (const ray of RAYS[f]) for (const x of ray) { if (this.cells[x] !== EMPTY) break; if (x === t) return true; }
+    return false;
+  }
+  // 随机走法（不生成全部走法）：随机选后、方向、距离，再随机选箭。用于快速随机模拟
+  randomMove(rng, side = this.side) {
+    const cells = this.cells, qs = this.queens[side];
+    for (let tries = 0; tries < 64; tries++) {
+      const f = qs[(rng() * 4) | 0];
+      const tg = this.queenTargets(f);
+      if (!tg.length) continue;
+      const t = tg[(rng() * tg.length) | 0];
+      cells[f] = EMPTY;
+      const ag = this.queenTargets(t);
+      cells[f] = side;
+      if (!ag.length) continue;                        // 理论上不会发生（至少能射回原处）
+      return mk(f, t, ag[(rng() * ag.length) | 0]);
+    }
+    const all = this.genMoves(side);
+    return all.length ? all[(rng() * all.length) | 0] : -1;
+  }
+  toString() {
+    let s = '';
+    for (let r = 0; r < N; r++) {
+      s += String(N - r).padStart(2) + ' ';
+      for (let c = 0; c < N; c++) s += '.WBx'[this.cells[r * N + c]] + ' ';
+      s += '\n';
+    }
+    return s + '   ' + COLS.split('').join(' ');
+  }
+}
+
+// ---------------------------------------------------------------- 距离计算
+// 后距离（queen distance）：从某方任一后出发，最少需要几步“后的移动”能到达该格（不考虑对方阻挡的动态变化）
+function queenDist(b, side, out = new Uint8Array(NN)) {
+  out.fill(INF);
+  const cells = b.cells, q = [];
+  for (const s of b.queens[side]) { out[s] = 0; q.push(s); }
+  let h = 0;
+  while (h < q.length) {
+    const x = q[h++], d = out[x] + 1, rays = RAYS[x];
+    for (let k = 0; k < 8; k++) {
+      const ray = rays[k];
+      for (let j = 0; j < ray.length; j++) {
+        const y = ray[j]; if (cells[y] !== EMPTY) break;
+        if (out[y] > d) { out[y] = d; q.push(y); }
+        else if (out[y] < d) continue;
+      }
+    }
+  }
+  return out;
+}
+// 王距离（king distance）：每步只走一格（8 邻域）
+function kingDist(b, side, out = new Uint8Array(NN)) {
+  out.fill(INF);
+  const cells = b.cells, q = [];
+  for (const s of b.queens[side]) { out[s] = 0; q.push(s); }
+  let h = 0;
+  while (h < q.length) {
+    const x = q[h++], d = out[x] + 1;
+    for (const y of NEIGH[x]) if (cells[y] === EMPTY && out[y] > d) { out[y] = d; q.push(y); }
+  }
+  return out;
+}
+// 双方的后距离都有限的空格数；为 0 表示双方已被完全分隔（进入“填格”阶段）
+function contestedCount(b, dW = queenDist(b, WHITE), dB = queenDist(b, BLACK)) {
+  let n = 0;
+  for (let i = 0; i < NN; i++) if (b.cells[i] === EMPTY && dW[i] < INF && dB[i] < INF) n++;
+  return n;
+}
+// 已分隔：没有争夺格，且双方的后不在同一个“非箭格子”的 8 邻域连通分量中（敌对的后紧挨着时，移开一方即会重新连通）
+function isSeparated(b) {
+  if (contestedCount(b) !== 0) return false;
+  const seen = new Uint8Array(NN), st = b.queens[WHITE].slice();
+  for (const q of st) seen[q] = 1;
+  while (st.length) { const x = st.pop(); for (const y of NEIGH[x]) { if (seen[y] || b.cells[y] === ARROW) continue; if (b.cells[y] === BLACK) return false; seen[y] = 1; st.push(y); } }
+  return true;
+}
+
+module.exports = {
+  N, NN, EMPTY, WHITE, BLACK, ARROW, INF, DIRS, RAYS, NEIGH, Board, mulberry32,
+  sqToStr, strToSq, moveToStr, parseMove, mFrom, mTo, mArrow, mk, queenDist, kingDist, contestedCount, isSeparated,
+};
+
+};
+__mods["eval.js"] = function (module, exports, require) {
+/*
+ * eval.js — 亚马逊棋静态评估
+ *
+ * 采用 Lieberum（2005）提出、后被多数亚马逊棋程序沿用的“领地 + 位置 + 机动性”评估框架：
+ *   t1：按后距离（queen distance）划分领地，谁先到达某格谁得 1 分，同时到达给行棋方 κ 分；
+ *   t2：同样的划分，改用王距离（king distance）；
+ *   c1：Σ 2·(2^-dW − 2^-dB)，后距离意义下的“位置”项；
+ *   c2：Σ clip((kB − kW)/6, −1, 1)，王距离意义下的“位置”项；
+ *   mob：双方各后的机动性（一步可到达的格数，截断到 12）之差；
+ *   w ：Σ 2^-|dW − dB|（双方都能到达的格子），衡量局面“还剩多少争夺”，用来确定阶段。
+ * 评估值 = Σ_k [ p·aE_k + (1−p)·aL_k ] · f_k，其中 p = min(1, w / W0) 是阶段系数。
+ * 这样的写法对权重是线性的，可以直接用 Texel 方法拟合（learning/texel.py）。
+ *
+ * 双方被完全分隔后（没有任何空格同时可被双方到达），改用“区域格数”精确地比较剩余步数的上界。
+ * 分数以“格”为单位，正值对行棋方有利。
+ */
+'use strict';
+const C = require('./core.js');
+const { NN, EMPTY, WHITE, BLACK, ARROW, INF, RAYS, NEIGH } = C;
+
+const FEATURES = ['t1', 't2', 'c1', 'c2', 'mob'];
+const NF = FEATURES.length;
+// 手工设定的默认权重：前 5 个是开局（p=1）权重，后 5 个是终局（p=0）权重
+const DEFAULT_WEIGHTS = [0.20, 0.20, 0.30, 0.30, 0.25, 1.00, 0.20, 0.05, 0.05, 0.05];
+const W0 = 60;            // 阶段归一化常数（开局时 w 约为 70，此后逐渐减小）
+const KAPPA = 0.2;        // 同时到达的格子给行棋方的分数
+const WIN = 10000;
+const SEP_BONUS = 200;
+
+const qbuf = new Int32Array(NN * 8);
+const POW2 = new Float64Array(INF + 1);
+for (let i = 0; i <= INF; i++) POW2[i] = Math.pow(2, -i);
+
+// 快速后距离 BFS（结果写入 out）
+function queenDist(cells, queens, out) {
+  out.fill(INF);
+  let h = 0, t = 0;
+  for (let i = 0; i < 4; i++) { const s = queens[i]; out[s] = 0; qbuf[t++] = s; }
+  while (h < t) {
+    const x = qbuf[h++], d = out[x] + 1, rays = RAYS[x];
+    for (let k = 0; k < 8; k++) {
+      const ray = rays[k];
+      for (let j = 0; j < ray.length; j++) {
+        const y = ray[j]; if (cells[y] !== EMPTY) break;
+        if (out[y] > d) { out[y] = d; qbuf[t++] = y; }
+      }
+    }
+  }
+  return out;
+}
+function kingDist(cells, queens, out) {
+  out.fill(INF);
+  let h = 0, t = 0;
+  for (let i = 0; i < 4; i++) { const s = queens[i]; out[s] = 0; qbuf[t++] = s; }
+  while (h < t) {
+    const x = qbuf[h++], d = out[x] + 1, nb = NEIGH[x];
+    for (let j = 0; j < nb.length; j++) { const y = nb[j]; if (cells[y] === EMPTY && out[y] > d) { out[y] = d; qbuf[t++] = y; } }
+  }
+  return out;
+}
+function queenMobility(cells, q) {
+  let n = 0; const rays = RAYS[q];
+  for (let k = 0; k < 8; k++) { const ray = rays[k]; for (let j = 0; j < ray.length; j++) { if (cells[ray[j]] !== EMPTY) break; n++; } }
+  return n;
+}
+
+const dW = new Uint8Array(NN), dB = new Uint8Array(NN), kW = new Uint8Array(NN), kB = new Uint8Array(NN);
+
+/**
+ * 计算特征（白方视角）。返回 { f: Float64Array(5), p, w, contested, regionW, regionB }
+ * 行棋方 side 决定 κ 的符号。
+ */
+function features(b, out = new Float64Array(NF)) {
+  const cells = b.cells, qW = b.queens[WHITE], qB = b.queens[BLACK];
+  queenDist(cells, qW, dW); queenDist(cells, qB, dB);
+  kingDist(cells, qW, kW); kingDist(cells, qB, kB);
+  const kap = b.side === WHITE ? KAPPA : -KAPPA;
+  let t1 = 0, t2 = 0, c1 = 0, c2 = 0, w = 0, contested = 0, rW = 0, rB = 0;
+  for (let i = 0; i < NN; i++) {
+    if (cells[i] !== EMPTY) continue;
+    const a = dW[i], c = dB[i];
+    if (a < INF) rW++;
+    if (c < INF) rB++;
+    if (a === INF && c === INF) continue;
+    if (a < c) t1 += 1; else if (a > c) t1 -= 1; else t1 += kap;
+    const ka = kW[i], kc = kB[i];
+    if (ka < kc) t2 += 1; else if (ka > kc) t2 -= 1; else if (ka < INF) t2 += kap;
+    c1 += 2 * (POW2[a] - POW2[c]);
+    let v = (kc - ka) / 6; if (v > 1) v = 1; else if (v < -1) v = -1;
+    c2 += v;
+    if (a < INF && c < INF) { contested++; const diff = a > c ? a - c : c - a; w += POW2[diff]; }
+  }
+  let mob = 0;
+  for (let i = 0; i < 4; i++) { const m = queenMobility(cells, qW[i]); mob += m < 12 ? m : 12; }
+  for (let i = 0; i < 4; i++) { const m = queenMobility(cells, qB[i]); mob -= m < 12 ? m : 12; }
+  out[0] = t1; out[1] = t2; out[2] = c1; out[3] = c2; out[4] = mob / 4;
+  const p = w / W0 > 1 ? 1 : w / W0;
+  return { f: out, p, w, contested, regionW: rW, regionB: rB };
+}
+
+// 分隔后的区域格数：用王距离可达的空格数（剩余步数的上界）
+function separatedScore(b, info) {
+  // info.regionW/B 用后距离可达性统计；分隔后与王距离可达性一致（同一个连通区域）
+  const own = b.side === WHITE ? info.regionW : info.regionB;
+  const opp = b.side === WHITE ? info.regionB : info.regionW;
+  const diff = own - opp - 0.5;            // 步数相同时行棋方先用完，所以减 0.5
+  return (diff > 0 ? SEP_BONUS : -SEP_BONUS) + diff;
+}
+
+const fbuf = new Float64Array(NF);
+/** 行棋方视角的评估值 */
+function evaluate(b, weights = DEFAULT_WEIGHTS) {
+  if (!b.canMove(b.side)) return -WIN;
+  const info = features(b, fbuf);
+  if (info.contested === 0 && !queensTouch(b.cells, b.queens[WHITE])) return separatedScore(b, info);
+  const p = info.p, f = info.f;
+  let s = 0;
+  for (let k = 0; k < NF; k++) s += (p * weights[k] + (1 - p) * weights[NF + k]) * f[k];
+  return b.side === WHITE ? s : -s;
+}
+
+/**
+ * 判断是否已分隔：在“空格 + 后所在格”构成的 8 邻域连通分量中，没有任何一个分量同时含有双方的后。
+ * 注意：只检查“没有空格同时可被双方到达”是不够的——两个敌对的后紧挨着、彼此之间没有空格时，
+ * 任何一方把后移开，空出的格子就会把两块区域连通（第一版实现正是这样判断的，见 5.10 节）。
+ */
+const stk = new Int8Array(NN), seen = new Uint8Array(NN);
+function separated(b) {
+  const cells = b.cells;
+  queenDist(cells, b.queens[WHITE], dW); queenDist(cells, b.queens[BLACK], dB);
+  for (let i = 0; i < NN; i++) if (cells[i] === EMPTY && dW[i] < INF && dB[i] < INF) return false;
+  return !queensTouch(cells, b.queens[WHITE]);
+}
+// 从白方的后出发，在非箭的格子上做 8 邻域洪泛，若能碰到黑方的后则返回 true
+function queensTouch(cells, qW) {
+  seen.fill(0); let top = 0;
+  for (const q of qW) { seen[q] = 1; stk[top++] = q; }
+  while (top) {
+    const x = stk[--top];
+    for (const y of C.NEIGH[x]) {
+      if (seen[y]) continue;
+      const v = cells[y];
+      if (v === ARROW) continue;
+      if (v === BLACK) return true;
+      seen[y] = 1; stk[top++] = y;
+    }
+  }
+  return false;
+}
+
+/** Texel 用：返回 10 维线性特征（白方视角）与是否分隔 */
+function texelFeatures(b) {
+  const info = features(b, new Float64Array(NF));
+  const x = new Array(2 * NF);
+  for (let k = 0; k < NF; k++) { x[k] = info.p * info.f[k]; x[NF + k] = (1 - info.p) * info.f[k]; }
+  return { x, separated: info.contested === 0 && !queensTouch(b.cells, b.queens[WHITE]), p: info.p, w: info.w, regionW: info.regionW, regionB: info.regionB };
+}
+
+/** 供界面使用：每个空格的归属（1 白 / -1 黑 / 0 均势 / null 无人可达）与双方后距离 */
+function territoryMap(b) {
+  const cells = b.cells;
+  const a = queenDist(cells, b.queens[WHITE], new Uint8Array(NN));
+  const c = queenDist(cells, b.queens[BLACK], new Uint8Array(NN));
+  const own = new Array(NN).fill(null);
+  for (let i = 0; i < NN; i++) {
+    if (cells[i] !== EMPTY) continue;
+    if (a[i] === INF && c[i] === INF) own[i] = null;
+    else own[i] = a[i] < c[i] ? 1 : a[i] > c[i] ? -1 : 0;
+  }
+  return { owner: own, dW: Array.from(a), dB: Array.from(c) };
+}
+
+module.exports = { FEATURES, NF, DEFAULT_WEIGHTS, W0, KAPPA, WIN, SEP_BONUS, evaluate, separated, features, texelFeatures, territoryMap, queenDist, kingDist, queenMobility };
+
+};
+__mods["movegen.js"] = function (module, exports, require) {
+/*
+ * movegen.js — 着法的廉价打分与筛选
+ *
+ * 亚马逊棋开局时约有 2176 个合法走法，中局也常有数百个，无法全宽搜索。
+ * 这里给每个走法一个只需常数次查表的“廉价分数”，用于：α-β 的束宽筛选与排序、
+ * MCTS 的渐进展开顺序与先验、贪心与模拟策略。分数由两部分组成：
+ *   后的移动：0.5 ×（到达点的机动性 − 出发点的机动性），机动性截断到 12；
+ *   箭的位置：2 ×（箭旁相邻的对方后数）− 1 ×（箭旁相邻的己方后数）
+ *             + 1 ×（该格对方后距离 ≤ 己方后距离，即对方的领地或均势格）
+ *             + 2^(1−d)（d 为对方后到该格的距离，越靠近对方的后越好）。
+ * 第一项鼓励把后走到开阔处，第二项鼓励用箭封堵对方的后、争夺对方领地而不堵自己。
+ * 这些规则是本文作者根据亚马逊棋的常见经验设定的（Lieberum 2005；Kloetzer 等 2007），
+ * 线性策略（policy.js）用同一组特征从对局数据中学习权重。
+ */
+'use strict';
+const C = require('./core.js');
+const E = require('./eval.js');
+const { NN, EMPTY, INF, RAYS, NEIGH } = C;
+
+const ROW = new Int8Array(NN), COL = new Int8Array(NN);
+for (let i = 0; i < NN; i++) { ROW[i] = (i / 10) | 0; COL[i] = i % 10; }
+function adj(a, b) { const dr = ROW[a] - ROW[b], dc = COL[a] - COL[b]; return a !== b && dr <= 1 && dr >= -1 && dc <= 1 && dc >= -1; }
+
+const dMe = new Uint8Array(NN), dOp = new Uint8Array(NN);
+const oppAdj = new Int8Array(NN), ownAdj = new Int8Array(NN);
+const POW2 = new Float64Array(INF + 1);
+for (let i = 0; i <= INF; i++) POW2[i] = i === 0 ? 0 : Math.pow(2, 1 - i);   // 1, 0.5, 0.25 …（距离 1 记 1）
+const W_DEFAULT = { mob: 0.5, oppAdj: 2, ownAdj: 1, terr: 1 };
+
+// 所有候选走法及分数的缓冲区（容量足够开局局面）
+const MAXM = 4096;
+const bufM = new Int32Array(MAXM), bufS = new Float64Array(MAXM);
+
+/** 预计算结点信息：双方后距离与相邻关系 */
+function prepare(b) {
+  const s = b.side, o = 3 - s, cells = b.cells;
+  E.queenDist(cells, b.queens[s], dMe); E.queenDist(cells, b.queens[o], dOp);
+  oppAdj.fill(0); ownAdj.fill(0);
+  for (const q of b.queens[o]) for (const n of NEIGH[q]) oppAdj[n]++;
+  for (const q of b.queens[s]) for (const n of NEIGH[q]) ownAdj[n]++;
+}
+
+/**
+ * 生成全部走法与廉价分数；返回走法数 n，结果在 bufM/bufS 中。
+ * w 为权重对象（默认 W_DEFAULT）。
+ */
+function scoreAll(b, w = W_DEFAULT) {
+  prepare(b);
+  const s = b.side, cells = b.cells;
+  let n = 0;
+  for (const f of b.queens[s]) {
+    const mobF = Math.min(12, E.queenMobility(cells, f));
+    cells[f] = EMPTY;
+    const rf = RAYS[f];
+    for (let d = 0; d < 8; d++) {
+      const ray = rf[d];
+      for (let k = 0; k < ray.length; k++) {
+        const t = ray[k]; if (cells[t] !== EMPTY) break;
+        const mobT = Math.min(12, E.queenMobility(cells, t));
+        const qs = w.mob * (mobT - mobF);
+        const base = f * 10000 + t * 100, rt = RAYS[t];
+        for (let e = 0; e < 8; e++) {
+          const r2 = rt[e];
+          for (let j = 0; j < r2.length; j++) {
+            const a = r2[j]; if (cells[a] !== EMPTY) break;
+            const own = ownAdj[a] - (adj(a, f) ? 1 : 0) + (adj(a, t) ? 1 : 0);
+            const terr = (dOp[a] <= dMe[a] && dOp[a] < INF ? 1 : 0) + POW2[dOp[a]];
+            bufM[n] = base + a; bufS[n] = qs + w.oppAdj * oppAdj[a] - w.ownAdj * own + w.terr * terr; n++;
+          }
+        }
+      }
+    }
+    cells[f] = s;
+  }
+  return n;
+}
+
+/** 廉价分数最高的 k 个走法（k<=0 表示全部），按分数降序（同分按编码升序，保证确定性）；返回 {moves, scores, total} */
+function topMoves(b, k, w) { return selectTop(scoreAll(b, w), k); }
+
+/*
+ * 可分离评估排序（本文采用的近似，第 2.5 节）：
+ *   score(f→t, a) ≈ Q(f,t) + A(a)，
+ *   Q(f,t)：只移动后、不射箭时的静态评估（行棋方视角）；
+ *   A(a)  ：不移动后、只在 a 处放一支箭时评估值的变化量。
+ * 只需约（后的走法数 + 空格数）次静态评估（中局约 150 次，≈1 ms），就能给全部走法打分，
+ * 比逐个评估全部走法（数百至两千次）便宜一个数量级；在随机中局局面中，
+ * 真正的静态最佳走法有约 90% 落在近似排序的前 8 名（第 5.9 节）。
+ */
+const Qtab = new Float64Array(NN * NN), Atab = new Float64Array(NN);
+function sepScoreAll(b, weights) {
+  const s = b.side, o = 3 - s, cells = b.cells, qs = b.queens[s];
+  // A：只放箭（视角仍为行棋方，评估时轮到对方走，故取负）
+  b.side = o;
+  const e0 = -E.evaluate(b, weights);
+  for (let a = 0; a < NN; a++) {
+    if (cells[a] !== EMPTY) { Atab[a] = 0; continue; }
+    cells[a] = C.ARROW; Atab[a] = -E.evaluate(b, weights) - e0; cells[a] = EMPTY;
+  }
+  b.side = s;
+  let n = 0;
+  for (let qi = 0; qi < 4; qi++) {
+    const f = qs[qi];
+    cells[f] = EMPTY;
+    const rf = RAYS[f];
+    for (let d = 0; d < 8; d++) {
+      const ray = rf[d];
+      for (let k = 0; k < ray.length; k++) {
+        const t = ray[k]; if (cells[t] !== EMPTY) break;
+        cells[t] = s; qs[qi] = t; b.side = o;
+        const q = -E.evaluate(b, weights);
+        b.side = s; qs[qi] = f; cells[t] = EMPTY;
+        const base = f * 10000 + t * 100, rt = RAYS[t];
+        for (let e = 0; e < 8; e++) {
+          const r2 = rt[e];
+          for (let j = 0; j < r2.length; j++) {
+            const a = r2[j]; if (cells[a] !== EMPTY) break;
+            bufM[n] = base + a; bufS[n] = q + (a === f ? 0 : Atab[a]); n++;
+          }
+        }
+      }
+    }
+    cells[f] = s;
+  }
+  return n;
+}
+
+function selectTop(n, k) {
+  if (k <= 0 || k >= n / 4) {
+    const arr = new Array(n); for (let i = 0; i < n; i++) arr[i] = i;
+    arr.sort((x, y) => bufS[y] - bufS[x] || bufM[x] - bufM[y]);
+    const m = k > 0 ? Math.min(k, n) : n;
+    const moves = new Array(m), scores = new Array(m);
+    for (let i = 0; i < m; i++) { moves[i] = bufM[arr[i]]; scores[i] = bufS[arr[i]]; }
+    return { moves, scores, total: n };
+  }
+  const tm = new Int32Array(k), ts = new Float64Array(k); let c = 0;
+  for (let i = 0; i < n; i++) {
+    const v = bufS[i], mv = bufM[i];
+    if (c === k && (v < ts[k - 1] || (v === ts[k - 1] && mv > tm[k - 1]))) continue;
+    let j = c < k ? c++ : k - 1;
+    while (j > 0 && (ts[j - 1] < v || (ts[j - 1] === v && tm[j - 1] > mv))) { ts[j] = ts[j - 1]; tm[j] = tm[j - 1]; j--; }
+    ts[j] = v; tm[j] = mv;
+  }
+  return { moves: Array.from(tm.subarray(0, c)), scores: Array.from(ts.subarray(0, c)), total: n };
+}
+/** 可分离评估排序的前 k 名 */
+function sepTopMoves(b, k, weights) { return selectTop(sepScoreAll(b, weights), k); }
+
+/** 学习策略使用的走法特征（与廉价分数同源，另加若干距离特征）。在 prepare(b) 之后调用 */
+const POLICY_FEATURES = ['mobDelta', 'mobT', 'oppAdj', 'ownAdj', 'terr', 'dOpT1', 'dOpT2', 'arrowNearOpp', 'arrowDist', 'qDist', 'opMobLoss'];
+function moveFeatures(b, m, out = new Float64Array(POLICY_FEATURES.length)) {
+  const s = b.side, cells = b.cells, f = C.mFrom(m), t = C.mTo(m), a = C.mArrow(m);
+  const mobF = Math.min(12, E.queenMobility(cells, f));
+  cells[f] = EMPTY; cells[t] = s;
+  const mobT0 = Math.min(12, E.queenMobility(cells, t));
+  // 箭对对方后机动性的削减量
+  let loss = 0;
+  for (const q of b.queens[3 - s]) {
+    const before = E.queenMobility(cells, q);
+    cells[a] = C.ARROW; const after = E.queenMobility(cells, q); cells[a] = EMPTY;
+    loss += before - after;
+  }
+  cells[t] = EMPTY; cells[f] = s;
+  const own = ownAdj[a] - (adj(a, f) ? 1 : 0) + (adj(a, t) ? 1 : 0);
+  const cheb = (x, y) => Math.max(Math.abs(ROW[x] - ROW[y]), Math.abs(COL[x] - COL[y]));
+  out[0] = (mobT0 - mobF) / 4;
+  out[1] = mobT0 / 12;
+  out[2] = oppAdj[a];
+  out[3] = own;
+  out[4] = dOp[a] <= dMe[a] && dOp[a] < INF ? 1 : 0;
+  out[5] = dOp[t] === 1 ? 1 : 0;
+  out[6] = dOp[t] === 2 ? 1 : 0;
+  out[7] = dOp[a] === 1 ? 1 : 0;
+  out[8] = cheb(a, t) / 9;
+  out[9] = cheb(f, t) / 9;
+  out[10] = loss / 8;
+  return out;
+}
+
+module.exports = { prepare, scoreAll, topMoves, sepScoreAll, sepTopMoves, selectTop, moveFeatures, POLICY_FEATURES, W_DEFAULT, bufM, bufS, adj };
+
+};
+__mods["search.js"] = function (module, exports, require) {
+/*
+ * search.js — α-β 博弈树搜索
+ *
+ * 负极大值（negamax）形式的 α-β 剪枝 + 迭代加深，辅以：
+ *   置换表（Zobrist 哈希，存储深度、分数类型与最佳着法）；
+ *   杀手着法与历史启发；
+ *   主变例搜索（PVS，零窗口试探 + 失败重搜）；
+ *   束宽剪枝：每个结点只搜索排序后的前 width 个走法（排序方式见 candidates）；
+ *   根结点用更宽的候选集合（rootPre 个候选，全部按静态评估排序，搜索前 rootWidth 个）。
+ * 每一项都可以通过选项关闭，用于消融实验（第 5.4 节）。
+ */
+'use strict';
+const C = require('./core.js');
+const E = require('./eval.js');
+const M = require('./movegen.js');
+
+const WIN = E.WIN, WIN_BOUND = WIN - 500;
+const INF = 1e9;
+const EXACT = 0, LOWER = 1, UPPER = 2;
+
+class TimeUp extends Error {}
+
+const DEFAULTS = {
+  timeMs: 200, maxDepth: 30,
+  useTT: true, useKillers: true, useHistory: true, usePVS: true,
+  order: 'sep',                // 内部结点的排序方式：'sep' 可分离评估 / 'cheap' 廉价分数 + 静态评估
+  leafOrder: 'cheap',          // 剩余深度为 1 的结点：'cheap' 取廉价分数前 preWidth 个全部评估 / 'sep'
+  width: 8, preWidth: 24,      // 内部结点束宽；廉价候选数
+  rootPre: 60, rootWidth: 30,  // 根结点：候选数 → 静态评估排序 → 搜索前 rootWidth 个
+  weights: null,               // 评估权重（null 表示默认手工权重）
+  ttBits: 18,
+};
+
+class AlphaBeta {
+  constructor(opts = {}) {
+    this.o = Object.assign({}, DEFAULTS, opts);
+    this.w = this.o.weights || E.DEFAULT_WEIGHTS;
+    const size = 1 << this.o.ttBits;
+    this.ttMask = size - 1;
+    if (this.o.useTT) {
+      this.ttKey = new Int32Array(size); this.ttKey2 = new Int32Array(size);
+      this.ttDepth = new Int8Array(size).fill(-1); this.ttFlag = new Int8Array(size);
+      this.ttVal = new Float64Array(size); this.ttMove = new Int32Array(size);
+    }
+    this.history = new Float64Array(100 * 100 * 2);
+  }
+
+  evaluate(b) { return E.evaluate(b, this.w); }
+
+  /**
+   * 候选生成：返回按优先级排序的走法数组。
+   *  order='sep'  ：内部结点用可分离评估排序取前 width 个（movegen.js）；
+   *  order='cheap'：内部结点先按廉价分数取 preWidth 个，再逐个静态评估、取前 width 个；
+   *  剩余深度为 1 的结点（子结点即叶结点）若 leafOrder='cheap'，直接取廉价分数前 preWidth 个，全部评估。
+   *  根结点：取 rootPre 个候选，逐个静态评估排序，搜索前 rootWidth 个。
+   */
+  candidates(b, depth, ply, ttMove) {
+    const o = this.o;
+    let list;
+    if (ply === 0) {
+      const top = (o.order === 'sep' ? M.sepTopMoves(b, o.rootPre, this.w) : M.topMoves(b, o.rootPre)).moves;
+      const sc = new Array(top.length);
+      for (let i = 0; i < top.length; i++) { b.play(top[i]); sc[i] = -this.evaluate(b); b.undo(); }
+      const idx = top.map((_, i) => i).sort((x, y) => sc[y] - sc[x] || x - y);
+      list = idx.slice(0, o.rootWidth).map(i => top[i]);
+      this.rootStatic = idx.map(i => ({ move: top[i], score: sc[i] }));
+    } else if (depth === 1 && o.leafOrder === 'cheap') {
+      list = M.topMoves(b, o.preWidth).moves;
+    } else if (o.order === 'sep') {
+      list = M.sepTopMoves(b, o.width, this.w).moves;
+    } else {
+      const top = M.topMoves(b, o.preWidth).moves;
+      if (depth >= 2) {
+        const sc = new Array(top.length);
+        for (let i = 0; i < top.length; i++) { b.play(top[i]); sc[i] = -this.evaluate(b); b.undo(); }
+        list = top.map((_, i) => i).sort((x, y) => sc[y] - sc[x] || x - y).slice(0, o.width).map(i => top[i]);
+      } else list = top;
+    }
+    // 杀手着法与历史启发：稳定地把它们提前
+    if (ply !== 0 && (o.useKillers || o.useHistory)) {
+      const k = this.killers[ply] || [];
+      const pri = new Map();
+      list.forEach((m, i) => {
+        let p = -i;                                         // 原顺序
+        if (o.useHistory) p += Math.min(4, this.history[(C.mFrom(m) * 100 + C.mTo(m)) * 2 + (b.side - 1)] / 1e3);
+        if (o.useKillers && (m === k[0] || m === k[1])) p += 1000;
+        pri.set(m, p);
+      });
+      list.sort((x, y) => pri.get(y) - pri.get(x));
+    }
+    if (ttMove > 0) {
+      const j = list.indexOf(ttMove);
+      if (j > 0) { list.splice(j, 1); list.unshift(ttMove); }
+      else if (j < 0 && b.isLegal(ttMove)) list.unshift(ttMove);
+    }
+    return list;
+  }
+
+  search(b0) {
+    const o = this.o;
+    const b = b0.clone();
+    this.t0 = Date.now(); this.deadline = this.t0 + o.timeMs;
+    this.nodes = 0; this.cutoffs = 0; this.firstCutoffs = 0; this.ttHits = 0; this.interior = 0; this.killers = []; this.history.fill(0); this.lastBest = 0; this.rootStatic = null;
+    if (o.useTT) this.ttDepth.fill(-1);
+    const iters = [];
+    let best = -1, bestScore = 0, depthDone = 0, pv = [], rootScores = [], partialUsed = false;
+    for (let d = 1; d <= o.maxDepth; d++) {
+      this.rootDepth = d;
+      try {
+        const r = this.root(b, d);
+        best = r.move; bestScore = r.score; depthDone = d; rootScores = r.scores;
+        pv = this.extractPV(b, best, d);
+        iters.push({ depth: d, move: C.moveToStr(best), score: +bestScore.toFixed(2), nodes: this.nodes, ms: Date.now() - this.t0 });
+        if (o.onIteration) o.onIteration(Object.assign({ pv: pv.map(C.moveToStr) }, iters[iters.length - 1]));
+        if (Math.abs(bestScore) > WIN_BOUND) break;          // 已找到胜负
+        const el = Date.now() - this.t0;
+        if (el > o.timeMs * 0.5) break;                      // 剩余时间不足一半时不再开始新的一层
+      } catch (e) {
+        if (!(e instanceof TimeUp)) throw e;
+        // 未完成的一层：若上一层的最佳着法已在本层搜完，则可采用本层已搜完部分中的最佳着法
+        const p = this.partial;
+        if (p && p.count >= 1 && p.move !== best) {
+          best = p.move; bestScore = p.score; partialUsed = true;
+          iters.push({ depth: d, move: C.moveToStr(best), score: +bestScore.toFixed(2), nodes: this.nodes, ms: Date.now() - this.t0, partial: p.count });
+        }
+        break;
+      }
+    }
+    if (best < 0) best = this.rootStatic && this.rootStatic.length ? this.rootStatic[0].move : b.genMoves()[0];
+    return {
+      move: best, score: bestScore, depth: depthDone, nodes: this.nodes, timeMs: Date.now() - this.t0,
+      reason: 'search', pv: pv.map(C.moveToStr), iterations: iters, partialUsed,
+      stats: { cutoffs: this.cutoffs, firstCutoffs: this.firstCutoffs, ttHits: this.ttHits, interior: this.interior },
+      rootMoves: rootScores.slice(0, 12).map(x => ({ move: x.move, score: x.score })),
+    };
+  }
+
+  root(b, depth) {
+    const o = this.o;
+    const moves = this.candidates(b, depth, 0, depth > 1 ? this.lastBest : 0);
+    let alpha = -INF, beta = INF, best = moves[0], bestV = -INF;
+    const scores = [];
+    this.partial = null;
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
+      b.play(m);
+      let v;
+      if (i === 0 || !o.usePVS) v = -this.negamax(b, depth - 1, -beta, -alpha, 1);
+      else {
+        v = -this.negamax(b, depth - 1, -alpha - 1e-6, -alpha, 1);
+        if (v > alpha) v = -this.negamax(b, depth - 1, -beta, -alpha, 1);
+      }
+      b.undo();
+      scores.push({ move: m, score: v });
+      if (v > bestV) { bestV = v; best = m; }
+      if (v > alpha) alpha = v;
+      this.partial = { move: best, score: bestV, count: i + 1 };
+    }
+    this.lastBest = best;
+    scores.sort((x, y) => y.score - x.score);
+    return { move: best, score: bestV, scores };
+  }
+
+  negamax(b, depth, alpha, beta, ply) {
+    const o = this.o;
+    if ((++this.nodes & 7) === 0 && Date.now() > this.deadline) throw new TimeUp();
+    if (!b.canMove(b.side)) return -WIN + ply;
+    if (depth <= 0) return this.evaluate(b);
+    const a0 = alpha;
+    let ttMove = 0, slot = -1;
+    if (o.useTT) {
+      slot = b.hashLo & this.ttMask;
+      if (this.ttKey[slot] === b.hashLo && this.ttKey2[slot] === b.hashHi && this.ttDepth[slot] >= 0) {
+        ttMove = this.ttMove[slot];
+        if (this.ttDepth[slot] >= depth) {
+          const v = this.ttVal[slot], f = this.ttFlag[slot];
+          this.ttHits++;
+          if (f === EXACT) return v;
+          if (f === LOWER && v >= beta) return v;
+          if (f === UPPER && v <= alpha) return v;
+        }
+      }
+    }
+    const sv = this.evaluate(b);
+    if (Math.abs(sv) >= E.SEP_BONUS - 60 && Math.abs(sv) < WIN_BOUND) return sv;   // 已分隔：区域计数即为估计
+    const moves = this.candidates(b, depth, ply, ttMove);
+    this.interior++;
+    let best = -INF, bestM = moves[0];
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
+      b.play(m);
+      let v;
+      if (i === 0 || !o.usePVS) v = -this.negamax(b, depth - 1, -beta, -alpha, ply + 1);
+      else {
+        v = -this.negamax(b, depth - 1, -alpha - 1e-6, -alpha, ply + 1);
+        if (v > alpha && v < beta) v = -this.negamax(b, depth - 1, -beta, -alpha, ply + 1);
+      }
+      b.undo();
+      if (v > best) { best = v; bestM = m; }
+      if (v > alpha) alpha = v;
+      if (alpha >= beta) {
+        this.cutoffs++; if (i === 0) this.firstCutoffs++;
+        if (o.useKillers) {
+          const k = this.killers[ply] || (this.killers[ply] = [0, 0]);
+          if (k[0] !== m) { k[1] = k[0]; k[0] = m; }
+        }
+        if (o.useHistory) this.history[(C.mFrom(m) * 100 + C.mTo(m)) * 2 + (b.side - 1)] += depth * depth;
+        break;
+      }
+    }
+    if (o.useTT) {
+      this.ttKey[slot] = b.hashLo; this.ttKey2[slot] = b.hashHi; this.ttDepth[slot] = depth;
+      this.ttVal[slot] = best; this.ttMove[slot] = bestM;
+      this.ttFlag[slot] = best <= a0 ? UPPER : best >= beta ? LOWER : EXACT;
+    }
+    return best;
+  }
+
+  extractPV(b, first, depth) {
+    const pv = [first];
+    if (!this.o.useTT) return pv;
+    const c = b.clone(); c.play(first);
+    for (let i = 1; i < depth; i++) {
+      const slot = c.hashLo & this.ttMask;
+      if (!(this.ttKey[slot] === c.hashLo && this.ttKey2[slot] === c.hashHi && this.ttDepth[slot] >= 0)) break;
+      const m = this.ttMove[slot];
+      if (!c.isLegal(m)) break;
+      pv.push(m); c.play(m);
+    }
+    return pv;
+  }
+}
+
+module.exports = { AlphaBeta, DEFAULTS, WIN, WIN_BOUND, TimeUp };
+
+};
+__mods["mcts.js"] = function (module, exports, require) {
+/*
+ * mcts.js — 蒙特卡洛树搜索
+ *
+ * 四个步骤：选择（UCT 或 PUCT）、扩展、模拟、回传。可配置的部分：
+ *   order   ：子结点的展开顺序。'random' 为随机打乱全部合法走法；'heuristic' 为按廉价分数
+ *             取前 maxCand 个；'sep' 为按可分离评估排序取前 maxCand 个；'learned' 为按学习策略的概率排序（同时提供 PUCT 先验）。
+ *   pw      ：渐进展开（progressive widening），结点访问 n 次时最多展开 ⌈pwC·n^pwA⌉ 个子结点；
+ *             关闭时每次访问展开一个新子结点，直到全部展开（标准 UCT）。
+ *   rollout ：'random' 随机下到终局；'cutoff' 随机走 cutoff 步后用评估函数估计胜率（Lorentz 2008）；
+ *             'eval' 不模拟，直接评估叶结点。
+ *   sepCheck：双方已被分隔时，直接用区域格数判定胜负，不再模拟。
+ * 胜率估计 p = 1 / (1 + exp(−k·v))，v 为评估值（行棋方视角）。
+ */
+'use strict';
+const C = require('./core.js');
+const E = require('./eval.js');
+const M = require('./movegen.js');
+
+const DEFAULTS = {
+  timeMs: 200, maxSims: 0, seed: 1,
+  selection: 'uct', cUct: 0.5, cPuct: 1.5,
+  order: 'heuristic', maxCand: 60, tau: 4,
+  pw: true, pwC: 2, pwA: 0.5,
+  rollout: 'cutoff', cutoff: 4, k: 0.18,
+  sepCheck: true, winCheck: true, weights: null, policyModel: null,
+};
+
+class Node {
+  constructor(parent, move, prior) {
+    this.parent = parent; this.move = move; this.prior = prior;
+    this.children = []; this.n = 0; this.w = 0;            // w：从“走入本结点的一方”看的累计收益
+    this.cand = null; this.candP = null; this.next = 0;    // 待展开的候选走法
+    this.terminal = 0;                                     // 1：走入本结点的一方已获胜（对方无子可动）
+  }
+}
+
+class MCTS {
+  constructor(opts = {}) {
+    this.o = Object.assign({}, DEFAULTS, opts);
+    this.rng = C.mulberry32(this.o.seed || 1);
+    this.w = this.o.weights || E.DEFAULT_WEIGHTS;
+  }
+
+  initCandidates(node, b) {
+    const o = this.o;
+    if (o.order === 'random') {
+      const ms = b.genMoves();
+      for (let i = ms.length - 1; i > 0; i--) { const j = (this.rng() * (i + 1)) | 0; const t = ms[i]; ms[i] = ms[j]; ms[j] = t; }
+      node.cand = ms; node.candP = null;
+    } else if (o.order === 'learned') {
+      const r = o.policyModel.rank(b, o.maxCand);
+      node.cand = r.moves; node.candP = r.probs;
+    } else {
+      const r = o.order === 'sep' ? M.sepTopMoves(b, o.maxCand, this.w) : M.topMoves(b, o.maxCand);
+      node.cand = r.moves;
+      // 启发式先验：对排序分数做 softmax（仅在 PUCT 下使用；温度 tau）
+      const mx = r.scores[0] || 0; let z = 0;
+      const p = r.scores.map(s => { const e = Math.exp((s - mx) / o.tau); z += e; return e; });
+      node.candP = p.map(x => x / z);
+    }
+  }
+
+  canExpand(node) {
+    if (node.next >= node.cand.length) return false;
+    if (!this.o.pw) return true;
+    return node.children.length < Math.ceil(this.o.pwC * Math.pow(node.n + 1, this.o.pwA));
+  }
+
+  select(node) {
+    const o = this.o;
+    let best = null, bv = -Infinity;
+    const lnN = Math.log(node.n + 1), sq = Math.sqrt(node.n + 1);
+    for (const c of node.children) {
+      if (c.terminal) return c;                             // 一步制胜
+      const q = c.n ? c.w / c.n : 0.5;
+      const u = o.selection === 'puct'
+        ? q + o.cPuct * c.prior * sq / (1 + c.n)
+        : q + o.cUct * Math.sqrt(lnN / (c.n + 1e-9));
+      if (u > bv) { bv = u; best = c; }
+    }
+    return best;
+  }
+
+  // 叶结点价值：返回“行棋方”的胜率估计
+  leafValue(b) {
+    const o = this.o;
+    if (!b.canMove(b.side)) return 0;
+    if (o.rollout === 'random') return this.randomPlayout(b, 400);
+    if (o.rollout === 'eval') return this.evalToProb(b);
+    // cutoff：随机走 cutoff 步后评估
+    const s0 = b.side; let k = 0;
+    for (; k < o.cutoff; k++) {
+      if (!b.canMove(b.side)) break;
+      b.play(b.randomMove(this.rng));
+    }
+    let v;
+    if (!b.canMove(b.side)) v = b.side === s0 ? 0 : 1;
+    else { const p = this.evalToProb(b); v = b.side === s0 ? p : 1 - p; }
+    for (let i = 0; i < k; i++) b.undo();
+    return v;
+  }
+  evalToProb(b) {
+    const v = E.evaluate(b, this.w);
+    return 1 / (1 + Math.exp(-this.o.k * v));
+  }
+  randomPlayout(b, cap) {
+    const s0 = b.side; let k = 0;
+    while (k < cap && b.canMove(b.side)) { b.play(b.randomMove(this.rng)); k++; }
+    const v = b.canMove(b.side) ? 0.5 : (b.side === s0 ? 0 : 1);
+    for (let i = 0; i < k; i++) b.undo();
+    return v;
+  }
+
+  search(b0) {
+    const o = this.o;
+    const b = b0.clone();
+    const t0 = Date.now(), deadline = t0 + o.timeMs;
+    const root = new Node(null, -1, 1);
+    this.initCandidates(root, b);
+    // 一步制胜检查：走完后对方无子可动
+    if (o.winCheck) for (const m of b.genMoves()) { b.play(m); const win = !b.canMove(b.side); b.undo(); if (win) return { move: m, reason: 'win', simulations: 0, winrate: 1, timeMs: Date.now() - t0 }; }
+    let sims = 0, maxDepth = 0, depthSum = 0;
+    while (true) {
+      if (o.maxSims ? sims >= o.maxSims : ((sims & 15) === 0 && Date.now() >= deadline)) break;
+      let node = root, d = 0;
+      // 1. 选择 / 2. 扩展
+      while (true) {
+        if (node.terminal) break;
+        if (!node.cand) this.initCandidates(node, b);
+        if (this.canExpand(node)) {
+          const m = node.cand[node.next];
+          const p = node.candP ? node.candP[node.next] : 1 / node.cand.length;
+          node.next++;
+          const c = new Node(node, m, p);
+          node.children.push(c);
+          b.play(m); d++;
+          if (!b.canMove(b.side)) c.terminal = 1;
+          node = c;
+          break;
+        }
+        if (!node.children.length) break;
+        node = this.select(node);
+        b.play(node.move); d++;
+      }
+      // 3. 模拟：value 为“走入 node 的一方”的收益
+      let value;
+      if (node.terminal) value = 1;
+      else if (o.sepCheck && E.separated(b)) {
+        const v = E.evaluate(b, this.w); value = v > 0 ? 0 : 1;
+      } else value = 1 - this.leafValue(b);
+      // 4. 回传
+      for (let x = node; x; x = x.parent) { x.n++; x.w += value; value = 1 - value; }
+      for (let i = 0; i < d; i++) b.undo();
+      sims++; depthSum += d; if (d > maxDepth) maxDepth = d;
+      if (o.onProgress && (sims & 63) === 0) {
+        const now = Date.now();
+        if (!this._lastProg || now - this._lastProg >= 150) {
+          this._lastProg = now;
+          let bc = null; for (const c of root.children) if (!bc || c.n > bc.n) bc = c;
+          o.onProgress({ simulations: sims, ms: now - t0, best: C.moveToStr(bc.move), winrate: bc.w / Math.max(1, bc.n), maxDepth });
+        }
+      }
+    }
+    let best = null;
+    for (const c of root.children) if (!best || c.n > best.n || (c.n === best.n && c.w > best.w)) best = c;
+    if (!best) { const ms = M.topMoves(b, 1).moves; return { move: ms[0], reason: 'fallback', simulations: sims, winrate: 0.5, timeMs: Date.now() - t0 }; }
+    const kids = root.children.slice().sort((x, y) => y.n - x.n);
+    // 主变例：沿访问次数最多的子结点下降
+    const pv = []; for (let x = best; x; ) { pv.push(C.moveToStr(x.move)); let nb = null; for (const c of x.children) if (!nb || c.n > nb.n) nb = c; if (!nb || nb.n < 2) break; x = nb; if (pv.length >= 8) break; }
+    return {
+      move: best.move, reason: 'mcts', simulations: sims, winrate: best.w / Math.max(1, best.n),
+      selDepth: maxDepth, avgDepth: sims ? depthSum / sims : 0, timeMs: Date.now() - t0, pv,
+      rootChildren: root.children.length,
+      rootMoves: kids.slice(0, 12).map(c => ({ move: c.move, visits: c.n, winrate: c.n ? c.w / c.n : 0, prior: c.prior })),
+    };
+  }
+}
+
+module.exports = { MCTS, DEFAULTS };
+
+};
+__mods["policy.js"] = function (module, exports, require) {
+/*
+ * policy.js — 线性 softmax 走子策略
+ *
+ * π(m | s) ∝ exp(θ · φ(s, m))，φ 为 movegen.js 中定义的 11 维走法特征，外加该走法的
+ * 可分离评估分数（相对于候选中最高分的差值，单位：格），共 12 维。
+ * 由于合法走法太多，先用可分离评估取前 pre 个候选，再在候选集合内计算 softmax。
+ * θ 由 learning/train_policy.py 从 α-β 自对弈棋谱中用最大似然拟合。
+ */
+'use strict';
+const M = require('./movegen.js');
+
+const NF = M.POLICY_FEATURES.length + 1;
+/** 候选集合与特征矩阵（训练数据提取与推断共用，保证一致） */
+function candidateFeatures(b, pre) {
+  const r = M.sepTopMoves(b, pre);
+  M.prepare(b);
+  const feats = r.moves.map((m, i) => {
+    const phi = new Float64Array(NF);
+    M.moveFeatures(b, m, phi);
+    phi[NF - 1] = (r.scores[i] - r.scores[0]) / 4;
+    return phi;
+  });
+  return { moves: r.moves, sepScores: r.scores, feats };
+}
+
+class LinearPolicy {
+  constructor(theta, pre = 40) { this.theta = theta; this.pre = pre; }
+  /** 返回概率最高的 k 个走法及其（在候选集合内归一化的）概率 */
+  rank(b, k) {
+    const c = candidateFeatures(b, this.pre), th = this.theta;
+    const cand = c.moves;
+    const lg = c.feats.map(phi => { let z = 0; for (let i = 0; i < th.length; i++) z += th[i] * phi[i]; return z; });
+    const mx = Math.max(...lg); let z = 0;
+    const p = lg.map(x => { const e = Math.exp(x - mx); z += e; return e / 1; });
+    const idx = cand.map((_, i) => i).sort((x, y) => p[y] - p[x] || x - y).slice(0, k);
+    return { moves: idx.map(i => cand[i]), probs: idx.map(i => p[i] / z) };
+  }
+}
+
+module.exports = { LinearPolicy, candidateFeatures, NF, FEATURE_NAMES: M.POLICY_FEATURES.concat(['sepScore']) };
+
+};
+__mods["agents.js"] = function (module, exports, require) {
+/*
+ * agents.js — 统一的智能体接口与预设配置
+ *
+ * 每个智能体实现 think(board) → { move, ...诊断信息 }。
+ * 实验脚本、网页界面与单元测试都通过 makeAgent(name, overrides) 创建智能体，
+ * 保证“游戏里运行的算法”与“报告中测量的算法”是同一份代码。
+ *
+ * 双方被完全分隔后（填格阶段），除随机智能体外，所有智能体都改用同一个填格策略 fillerMove，
+ * 使实验比较集中在双方仍有接触的阶段（第 2.6 节）。
+ */
+'use strict';
+const C = require('./core.js');
+const E = require('./eval.js');
+const M = require('./movegen.js');
+const { AlphaBeta } = require('./search.js');
+const { MCTS } = require('./mcts.js');
+const { LinearPolicy } = require('./policy.js');
+
+/**
+ * 填格策略：在已分隔的局面中，选择走完后“己方可达空格数”最大的走法；
+ * 同分时优先把箭射在周围空格最少的位置（先填死角，减少对自身区域的切割）。
+ */
+const kbuf = new Uint8Array(C.NN);
+function reachable(b, side) {
+  E.kingDist(b.cells, b.queens[side], kbuf);
+  let n = 0; for (let i = 0; i < C.NN; i++) if (b.cells[i] === C.EMPTY && kbuf[i] < C.INF) n++;
+  return n;
+}
+function fillerMove(b) {
+  const s = b.side, ms = b.genMoves();
+  let best = ms[0], bv = -Infinity;
+  for (const m of ms) {
+    const a = C.mArrow(m);
+    b.play(m);
+    let free = 0; for (const x of C.NEIGH[a]) if (b.cells[x] === C.EMPTY) free++;
+    const v = reachable(b, s) * 10 - free;
+    b.undo();
+    if (v > bv) { bv = v; best = m; }
+  }
+  return best;
+}
+
+function maybeFiller(b, o, t0) {
+  if (o.filler === false) return null;
+  if (!E.separated(b)) return null;
+  return { move: fillerMove(b), reason: 'filler', score: E.evaluate(b, o.weights || undefined), timeMs: Date.now() - t0 };
+}
+
+class RandomAgent {
+  constructor(o = {}) { this.rng = C.mulberry32(o.seed || 1); this.o = o; }
+  think(b) {
+    const t0 = Date.now();
+    const ms = b.genMoves();
+    return { move: ms[(this.rng() * ms.length) | 0], reason: 'random', timeMs: Date.now() - t0 };
+  }
+}
+
+/** 一步贪心：枚举全部合法走法，取走完后静态评估最好的一步 */
+class GreedyAgent {
+  constructor(o = {}) { this.o = o; this.w = o.weights || E.DEFAULT_WEIGHTS; }
+  think(b0) {
+    const t0 = Date.now();
+    const f = maybeFiller(b0, this.o, t0); if (f) return f;
+    const b = b0.clone();
+    let best = -1, bv = -Infinity;
+    for (const m of b.genMoves()) { b.play(m); const v = -E.evaluate(b, this.w); b.undo(); if (v > bv) { bv = v; best = m; } }
+    return { move: best, reason: 'greedy', score: bv, timeMs: Date.now() - t0 };
+  }
+}
+
+class ABAgent {
+  constructor(o = {}) { this.o = o; this.engine = new AlphaBeta(o); }
+  think(b) { const f = maybeFiller(b, this.o, Date.now()); return f || this.engine.search(b); }
+}
+class MCTSAgent {
+  constructor(o = {}) { this.o = o; this.engine = new MCTS(o); }
+  think(b) { const f = maybeFiller(b, this.o, Date.now()); return f || this.engine.search(b); }
+}
+
+// 预设：实验与界面共用
+const PRESETS = {
+  'random': { kind: 'random' },
+  'greedy': { kind: 'greedy' },
+  // α-β 完整版与消融
+  'ab': { kind: 'ab' },
+  'ab-noTT': { kind: 'ab', useTT: false },
+  'ab-noKiller': { kind: 'ab', useKillers: false, useHistory: false },
+  'ab-noPVS': { kind: 'ab', usePVS: false },
+  'ab-cheapOrder': { kind: 'ab', order: 'cheap' },
+  'ab-sepLeaf': { kind: 'ab', leafOrder: 'sep' },
+  'ab-wide': { kind: 'ab', width: 16, preWidth: 48, rootPre: 120, rootWidth: 60 },
+  'ab-narrow': { kind: 'ab', width: 4, preWidth: 12, rootPre: 30, rootWidth: 15 },
+  'ab-simpleEval': { kind: 'ab', weights: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0] },
+  'ab-tuned': { kind: 'ab', weights: 'tuned' },
+  'ab-plain': { kind: 'ab', useTT: false, useKillers: false, useHistory: false, usePVS: false },
+  // MCTS 系列
+  'mcts-pure': { kind: 'mcts', selection: 'uct', order: 'random', pw: false, rollout: 'random', sepCheck: false, winCheck: false, filler: false },
+  'mcts-uct': { kind: 'mcts', selection: 'uct', order: 'random', pw: false, rollout: 'cutoff' },
+  'mcts-pw': { kind: 'mcts', selection: 'uct', order: 'heuristic', pw: true, rollout: 'random' },
+  'mcts-cutoff': { kind: 'mcts', selection: 'uct', order: 'heuristic', pw: true, rollout: 'cutoff' },
+  'mcts-sep': { kind: 'mcts', selection: 'uct', order: 'sep', pw: true, rollout: 'cutoff', maxCand: 30 },
+  'mcts-puct': { kind: 'mcts', selection: 'puct', order: 'sep', pw: true, rollout: 'cutoff', maxCand: 30 },
+  'mcts-learned': { kind: 'mcts', selection: 'puct', order: 'learned', pw: true, rollout: 'cutoff', maxCand: 30 },
+};
+
+let POLICY_THETA = null;
+let TUNED_WEIGHTS = null;
+function setPolicyTheta(theta) { POLICY_THETA = theta; }
+function setTunedWeights(w) { TUNED_WEIGHTS = w; }
+
+function makeAgent(name, overrides = {}) {
+  const base = PRESETS[name];
+  if (!base) throw new Error('unknown agent ' + name);
+  const o = Object.assign({}, base, overrides);
+  if (o.weights === 'tuned') {
+    if (!TUNED_WEIGHTS) throw new Error('tuned weights not loaded');
+    o.weights = TUNED_WEIGHTS;
+  }
+  if (o.order === 'learned' && !o.policyModel) {
+    if (!POLICY_THETA) throw new Error('policy weights not loaded');
+    o.policyModel = new LinearPolicy(POLICY_THETA);
+  }
+  switch (o.kind) {
+    case 'random': return new RandomAgent(o);
+    case 'greedy': return new GreedyAgent(o);
+    case 'ab': return new ABAgent(o);
+    case 'mcts': return new MCTSAgent(o);
+  }
+  throw new Error('bad kind');
+}
+
+module.exports = { RandomAgent, GreedyAgent, ABAgent, MCTSAgent, PRESETS, makeAgent, setPolicyTheta, setTunedWeights, fillerMove };
+
+};
+__mods["index.js"] = function (module, exports, require) {
+'use strict';
+// 引擎入口：汇总导出（Node.js 与浏览器打包共用）
+const C = require('./core.js');
+const E = require('./eval.js');
+const M = require('./movegen.js');
+const S = require('./search.js');
+const T = require('./mcts.js');
+const A = require('./agents.js');
+const P = require('./policy.js');
+module.exports = Object.assign({}, C, { Eval: E, MoveGen: M, Search: S, MCTSMod: T, Policy: P }, A, { evaluate: E.evaluate, territoryMap: E.territoryMap });
+
+};
+global.AmazonsAI = require("index.js");
+})(typeof self !== "undefined" ? self : this);
+</script>
+<script>var POLICY_THETA = [0.6295092823502955,-2.004500152156739,0.748196914581747,-0.2299345775408607,0.004092210498283419,1.1928124973633636,0.7980049776373085,0.062304723697199305,1.03684000493638,-0.794630683854228,1.4921354078610356,0.15088203228036853];
+var TUNED_WEIGHTS = [-0.05526782313673007,-0.054805310644464277,-0.10936717048019039,0.24610182719556808,0.5153228224554195,1.4452197739453307,0.8639306145964015,0.13300242979083382,0.3312270074708409,0.4689434139817843];
+var WIN_K = 0.2604071104946248;
+var AI_LIST_CFG = [{"id":"ab","name":"α-β 搜索（PVS + 可分离排序）","short":"α-β"},{"id":"mcts-puct","name":"MCTS · PUCT + 可分离先验 + 评估截断","short":"MCTS-PUCT"},{"id":"mcts-learned","name":"MCTS · 学习先验","short":"MCTS-学习","needPolicy":true},{"id":"ab-tuned","name":"α-β · Texel 学习权重","short":"α-β-Texel","needTuned":true},{"id":"mcts-cutoff","name":"MCTS · UCT + 评估截断","short":"MCTS-截断"},{"id":"mcts-pure","name":"MCTS · 纯随机模拟","short":"MCTS-纯随机"},{"id":"greedy","name":"贪心 · 一步评估","short":"贪心"},{"id":"random","name":"随机走子","short":"随机"}];
+var OPENINGS = [["d1-d8/f10","g10-g5/a5"],["d1-d8/f10","a7-e3/e7"],["d1-d8/j8","g10-g5/i5"],["a4-d7/i7","g10-g2/j5"],["d1-d7/b7","a7-d4/d6"],["d1-d9/f9","g10-g2/i4"],["g1-g7/g9","d10-d5/a5"],["j4-g7/b7","d10-d5/a5"],["d1-d7/b7","g10-g4/i4"],["g1-g8/i8","d10-d5/i5"],["d1-d9/a6","g10-g4/g2"],["g1-g8/i6","d10-d3/a3"],["d1-d8/i8","g10-g5/j5"],["g1-g8/e10","d10-d2/b4"],["d1-d7/i7","g10-g5/d8"],["g1-g8/e10","d10-d3/h7"],["d1-d8/a8","a7-e3/b3"],["d1-d7/f9","g10-g2/c6"],["g1-g7/b7","d10-d4/b4"],["g1-g8/i6","d10-d5/j5"],["d1-d7/d9","a7-e3/e7"],["d1-d8/b8","a7-e3/e8"],["d1-d9/f9","g10-g4/b4"],["a4-d7/i7","g10-g6/g2"],["d1-d9/f9","g10-g3/a3"],["d1-d9/g9","a7-e3/a3"],["d1-d8/b6","j7-g4/g2"],["g1-g7/g9","d10-d5/j5"],["d1-d7/f9","g10-g5/g2"],["g1-g8/j8","a7-e3/a3"],["g1-g7/e9","d10-d4/b4"],["g1-g8/a8","a7-d4/d2"]];
+</script>
+<script id="workerSrc" type="text/plain">/* AmazonsAI engine bundle — generated by game/build.js */
+(function (global) {
+"use strict";
+const __mods = {};
+const __cache = {};
+function require(name) { const k = name.replace(/^\.\//, "").replace(/^\.\.\/engine\//, ""); if (__cache[k]) return __cache[k].exports; const m = { exports: {} }; __cache[k] = m; __mods[k](m, m.exports, require); return m.exports; }
+__mods["core.js"] = function (module, exports, require) {
+'use strict';
+/*
+ * core.js —— 10×10 亚马逊棋的棋盘表示、走法生成与距离计算
+ *
+ * 规则要点：
+ *   1. 双方各有 4 个“亚马逊”（后），白方先行；
+ *   2. 一步棋 = 移动一个己方的后（像国际象棋的后一样沿 8 个方向直线移动任意格，不能越过任何棋子或障碍）
+ *      + 从落点再像后一样射出一支“箭”，箭落的格子永久成为障碍；
+ *   3. 轮到某方时若无合法走法，该方判负（不存在和棋）。
+ *
+ * 表示：格点编号 idx = r * 10 + c，r = 0 为最上一行（第 10 行），c = 0 为 a 列。
+ *       cells[idx]：0 空，1 白后，2 黑后，3 箭（障碍）。
+ *       一步棋编码为整数 from * 10000 + to * 100 + arrow，字符串形如 "d1-d7/g7"。
+ */
+const N = 10, NN = 100;
+const EMPTY = 0, WHITE = 1, BLACK = 2, ARROW = 3;
+const DIRS = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+const INF = 99;
+
+// 射线表：RAYS[idx][d] = 从 idx 出发沿方向 d 依次经过的格点（不含 idx）
+const RAYS = [];
+const NEIGH = [];          // 8 邻域
+for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+  const rays = [], nb = [];
+  for (const [dr, dc] of DIRS) {
+    const ray = [];
+    let rr = r + dr, cc = c + dc;
+    while (rr >= 0 && rr < N && cc >= 0 && cc < N) { ray.push(rr * N + cc); rr += dr; cc += dc; }
+    rays.push(ray);
+    if (ray.length) nb.push(ray[0]);
+  }
+  RAYS.push(rays); NEIGH.push(nb);
+}
+
+// Zobrist 随机数（两段 32 位，避免 JS 位运算的 53 位限制）
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const zr = mulberry32(20241107);
+const ZLO = [], ZHI = [];
+for (let i = 0; i < NN * 4; i++) { ZLO.push((zr() * 4294967296) >>> 0); ZHI.push((zr() * 4294967296) >>> 0); }
+const ZSIDE_LO = (zr() * 4294967296) >>> 0, ZSIDE_HI = (zr() * 4294967296) >>> 0;
+
+const COLS = 'abcdefghij';
+const sqToStr = i => COLS[i % N] + (N - ((i / N) | 0));
+function strToSq(s) {
+  const c = COLS.indexOf(s[0].toLowerCase()), row = parseInt(s.slice(1), 10);
+  if (c < 0 || !(row >= 1 && row <= N)) throw new Error('bad square ' + s);
+  return (N - row) * N + c;
+}
+const mFrom = m => (m / 10000) | 0, mTo = m => ((m / 100) | 0) % 100, mArrow = m => m % 100;
+const mk = (f, t, a) => f * 10000 + t * 100 + a;
+const moveToStr = m => `${sqToStr(mFrom(m))}-${sqToStr(mTo(m))}/${sqToStr(mArrow(m))}`;
+function parseMove(s) {
+  const m = /^([a-j]\d{1,2})-([a-j]\d{1,2})\/([a-j]\d{1,2})$/i.exec(s.trim());
+  if (!m) throw new Error('bad move ' + s);
+  return mk(strToSq(m[1]), strToSq(m[2]), strToSq(m[3]));
+}
+
+const START_WHITE = ['a4', 'd1', 'g1', 'j4'].map(strToSq);
+const START_BLACK = ['a7', 'd10', 'g10', 'j7'].map(strToSq);
+
+class Board {
+  constructor() {
+    this.cells = new Int8Array(NN);
+    this.queens = [null, START_WHITE.slice(), START_BLACK.slice()];
+    for (const q of this.queens[WHITE]) this.cells[q] = WHITE;
+    for (const q of this.queens[BLACK]) this.cells[q] = BLACK;
+    this.side = WHITE;
+    this.history = [];
+    this.hashLo = 0; this.hashHi = 0;
+    for (let i = 0; i < NN; i++) if (this.cells[i]) { this.hashLo ^= ZLO[i * 4 + this.cells[i]]; this.hashHi ^= ZHI[i * 4 + this.cells[i]]; }
+  }
+  static fromMoves(list) {
+    const b = new Board();
+    for (const s of list) {
+      const m = typeof s === 'number' ? s : parseMove(s);
+      if (!b.isLegal(m)) throw new Error('illegal move ' + (typeof s === 'number' ? moveToStr(s) : s));
+      b.play(m);
+    }
+    return b;
+  }
+  clone() {
+    const b = Object.create(Board.prototype);
+    b.cells = this.cells.slice(); b.queens = [null, this.queens[1].slice(), this.queens[2].slice()];
+    b.side = this.side; b.history = this.history.slice(); b.hashLo = this.hashLo; b.hashHi = this.hashHi;
+    return b;
+  }
+  get arrows() { return this.history.length; }
+  _set(i, v) {
+    const old = this.cells[i];
+    if (old) { this.hashLo ^= ZLO[i * 4 + old]; this.hashHi ^= ZHI[i * 4 + old]; }
+    this.cells[i] = v;
+    if (v) { this.hashLo ^= ZLO[i * 4 + v]; this.hashHi ^= ZHI[i * 4 + v]; }
+  }
+  play(m) {
+    const f = mFrom(m), t = mTo(m), a = mArrow(m), s = this.side;
+    const qs = this.queens[s]; qs[qs.indexOf(f)] = t;
+    this._set(f, EMPTY); this._set(t, s); this._set(a, ARROW);
+    this.history.push(m);
+    this.side = 3 - s; this.hashLo ^= ZSIDE_LO; this.hashHi ^= ZSIDE_HI;
+  }
+  undo() {
+    const m = this.history.pop();
+    const f = mFrom(m), t = mTo(m), a = mArrow(m), s = 3 - this.side;
+    this.side = s; this.hashLo ^= ZSIDE_LO; this.hashHi ^= ZSIDE_HI;
+    this._set(a, EMPTY); this._set(t, EMPTY); this._set(f, s);
+    const qs = this.queens[s]; qs[qs.indexOf(t)] = f;
+  }
+  lastMove() { return this.history.length ? this.history[this.history.length - 1] : -1; }
+  // 某方是否还有合法走法：只要某个后旁边有空格，就可以走一步再把箭射回原处
+  canMove(side = this.side) {
+    for (const q of this.queens[side]) for (const n of NEIGH[q]) if (this.cells[n] === EMPTY) return true;
+    return false;
+  }
+  isOver() { return !this.canMove(this.side); }
+  get winner() { return this.isOver() ? 3 - this.side : 0; }
+  // 一个后从 q 出发一步能到达的空格（目的地）
+  queenTargets(q, out = []) {
+    const rays = RAYS[q], cells = this.cells;
+    for (let d = 0; d < 8; d++) { const ray = rays[d]; for (let k = 0; k < ray.length; k++) { const x = ray[k]; if (cells[x] !== EMPTY) break; out.push(x); } }
+    return out;
+  }
+  // 全部合法走法（整数编码）。开局时约 2176 步
+  genMoves(side = this.side) {
+    const out = [], cells = this.cells;
+    for (const f of this.queens[side]) {
+      cells[f] = EMPTY;                                   // 射箭时原位置已空出
+      const rays = RAYS[f];
+      for (let d = 0; d < 8; d++) {
+        const ray = rays[d];
+        for (let k = 0; k < ray.length; k++) {
+          const t = ray[k]; if (cells[t] !== EMPTY) break;
+          const base = f * 10000 + t * 100, rt = RAYS[t];
+          for (let e = 0; e < 8; e++) { const r2 = rt[e]; for (let j = 0; j < r2.length; j++) { const a = r2[j]; if (cells[a] !== EMPTY) break; out.push(base + a); } }
+        }
+      }
+      cells[f] = side;
+    }
+    return out;
+  }
+  countMoves(side = this.side) {
+    let n = 0; const cells = this.cells;
+    for (const f of this.queens[side]) {
+      cells[f] = EMPTY;
+      for (const ray of RAYS[f]) for (const t of ray) { if (cells[t] !== EMPTY) break; for (const r2 of RAYS[t]) for (const a of r2) { if (cells[a] !== EMPTY) break; n++; } }
+      cells[f] = side;
+    }
+    return n;
+  }
+  isLegal(m) {
+    if (!(m >= 0)) return false;
+    const f = mFrom(m), t = mTo(m), a = mArrow(m);
+    if (f >= NN || t >= NN || a >= NN || this.cells[f] !== this.side || this.isOver()) return false;
+    if (!this._reach(f, t)) return false;
+    this.cells[f] = EMPTY; const ok = this._reach(t, a); this.cells[f] = this.side;
+    return ok;
+  }
+  _reach(f, t) {
+    for (const ray of RAYS[f]) for (const x of ray) { if (this.cells[x] !== EMPTY) break; if (x === t) return true; }
+    return false;
+  }
+  // 随机走法（不生成全部走法）：随机选后、方向、距离，再随机选箭。用于快速随机模拟
+  randomMove(rng, side = this.side) {
+    const cells = this.cells, qs = this.queens[side];
+    for (let tries = 0; tries < 64; tries++) {
+      const f = qs[(rng() * 4) | 0];
+      const tg = this.queenTargets(f);
+      if (!tg.length) continue;
+      const t = tg[(rng() * tg.length) | 0];
+      cells[f] = EMPTY;
+      const ag = this.queenTargets(t);
+      cells[f] = side;
+      if (!ag.length) continue;                        // 理论上不会发生（至少能射回原处）
+      return mk(f, t, ag[(rng() * ag.length) | 0]);
+    }
+    const all = this.genMoves(side);
+    return all.length ? all[(rng() * all.length) | 0] : -1;
+  }
+  toString() {
+    let s = '';
+    for (let r = 0; r < N; r++) {
+      s += String(N - r).padStart(2) + ' ';
+      for (let c = 0; c < N; c++) s += '.WBx'[this.cells[r * N + c]] + ' ';
+      s += '\n';
+    }
+    return s + '   ' + COLS.split('').join(' ');
+  }
+}
+
+// ---------------------------------------------------------------- 距离计算
+// 后距离（queen distance）：从某方任一后出发，最少需要几步“后的移动”能到达该格（不考虑对方阻挡的动态变化）
+function queenDist(b, side, out = new Uint8Array(NN)) {
+  out.fill(INF);
+  const cells = b.cells, q = [];
+  for (const s of b.queens[side]) { out[s] = 0; q.push(s); }
+  let h = 0;
+  while (h < q.length) {
+    const x = q[h++], d = out[x] + 1, rays = RAYS[x];
+    for (let k = 0; k < 8; k++) {
+      const ray = rays[k];
+      for (let j = 0; j < ray.length; j++) {
+        const y = ray[j]; if (cells[y] !== EMPTY) break;
+        if (out[y] > d) { out[y] = d; q.push(y); }
+        else if (out[y] < d) continue;
+      }
+    }
+  }
+  return out;
+}
+// 王距离（king distance）：每步只走一格（8 邻域）
+function kingDist(b, side, out = new Uint8Array(NN)) {
+  out.fill(INF);
+  const cells = b.cells, q = [];
+  for (const s of b.queens[side]) { out[s] = 0; q.push(s); }
+  let h = 0;
+  while (h < q.length) {
+    const x = q[h++], d = out[x] + 1;
+    for (const y of NEIGH[x]) if (cells[y] === EMPTY && out[y] > d) { out[y] = d; q.push(y); }
+  }
+  return out;
+}
+// 双方的后距离都有限的空格数；为 0 表示双方已被完全分隔（进入“填格”阶段）
+function contestedCount(b, dW = queenDist(b, WHITE), dB = queenDist(b, BLACK)) {
+  let n = 0;
+  for (let i = 0; i < NN; i++) if (b.cells[i] === EMPTY && dW[i] < INF && dB[i] < INF) n++;
+  return n;
+}
+// 已分隔：没有争夺格，且双方的后不在同一个“非箭格子”的 8 邻域连通分量中（敌对的后紧挨着时，移开一方即会重新连通）
+function isSeparated(b) {
+  if (contestedCount(b) !== 0) return false;
+  const seen = new Uint8Array(NN), st = b.queens[WHITE].slice();
+  for (const q of st) seen[q] = 1;
+  while (st.length) { const x = st.pop(); for (const y of NEIGH[x]) { if (seen[y] || b.cells[y] === ARROW) continue; if (b.cells[y] === BLACK) return false; seen[y] = 1; st.push(y); } }
+  return true;
+}
+
+module.exports = {
+  N, NN, EMPTY, WHITE, BLACK, ARROW, INF, DIRS, RAYS, NEIGH, Board, mulberry32,
+  sqToStr, strToSq, moveToStr, parseMove, mFrom, mTo, mArrow, mk, queenDist, kingDist, contestedCount, isSeparated,
+};
+
+};
+__mods["eval.js"] = function (module, exports, require) {
+/*
+ * eval.js — 亚马逊棋静态评估
+ *
+ * 采用 Lieberum（2005）提出、后被多数亚马逊棋程序沿用的“领地 + 位置 + 机动性”评估框架：
+ *   t1：按后距离（queen distance）划分领地，谁先到达某格谁得 1 分，同时到达给行棋方 κ 分；
+ *   t2：同样的划分，改用王距离（king distance）；
+ *   c1：Σ 2·(2^-dW − 2^-dB)，后距离意义下的“位置”项；
+ *   c2：Σ clip((kB − kW)/6, −1, 1)，王距离意义下的“位置”项；
+ *   mob：双方各后的机动性（一步可到达的格数，截断到 12）之差；
+ *   w ：Σ 2^-|dW − dB|（双方都能到达的格子），衡量局面“还剩多少争夺”，用来确定阶段。
+ * 评估值 = Σ_k [ p·aE_k + (1−p)·aL_k ] · f_k，其中 p = min(1, w / W0) 是阶段系数。
+ * 这样的写法对权重是线性的，可以直接用 Texel 方法拟合（learning/texel.py）。
+ *
+ * 双方被完全分隔后（没有任何空格同时可被双方到达），改用“区域格数”精确地比较剩余步数的上界。
+ * 分数以“格”为单位，正值对行棋方有利。
+ */
+'use strict';
+const C = require('./core.js');
+const { NN, EMPTY, WHITE, BLACK, ARROW, INF, RAYS, NEIGH } = C;
+
+const FEATURES = ['t1', 't2', 'c1', 'c2', 'mob'];
+const NF = FEATURES.length;
+// 手工设定的默认权重：前 5 个是开局（p=1）权重，后 5 个是终局（p=0）权重
+const DEFAULT_WEIGHTS = [0.20, 0.20, 0.30, 0.30, 0.25, 1.00, 0.20, 0.05, 0.05, 0.05];
+const W0 = 60;            // 阶段归一化常数（开局时 w 约为 70，此后逐渐减小）
+const KAPPA = 0.2;        // 同时到达的格子给行棋方的分数
+const WIN = 10000;
+const SEP_BONUS = 200;
+
+const qbuf = new Int32Array(NN * 8);
+const POW2 = new Float64Array(INF + 1);
+for (let i = 0; i <= INF; i++) POW2[i] = Math.pow(2, -i);
+
+// 快速后距离 BFS（结果写入 out）
+function queenDist(cells, queens, out) {
+  out.fill(INF);
+  let h = 0, t = 0;
+  for (let i = 0; i < 4; i++) { const s = queens[i]; out[s] = 0; qbuf[t++] = s; }
+  while (h < t) {
+    const x = qbuf[h++], d = out[x] + 1, rays = RAYS[x];
+    for (let k = 0; k < 8; k++) {
+      const ray = rays[k];
+      for (let j = 0; j < ray.length; j++) {
+        const y = ray[j]; if (cells[y] !== EMPTY) break;
+        if (out[y] > d) { out[y] = d; qbuf[t++] = y; }
+      }
+    }
+  }
+  return out;
+}
+function kingDist(cells, queens, out) {
+  out.fill(INF);
+  let h = 0, t = 0;
+  for (let i = 0; i < 4; i++) { const s = queens[i]; out[s] = 0; qbuf[t++] = s; }
+  while (h < t) {
+    const x = qbuf[h++], d = out[x] + 1, nb = NEIGH[x];
+    for (let j = 0; j < nb.length; j++) { const y = nb[j]; if (cells[y] === EMPTY && out[y] > d) { out[y] = d; qbuf[t++] = y; } }
+  }
+  return out;
+}
+function queenMobility(cells, q) {
+  let n = 0; const rays = RAYS[q];
+  for (let k = 0; k < 8; k++) { const ray = rays[k]; for (let j = 0; j < ray.length; j++) { if (cells[ray[j]] !== EMPTY) break; n++; } }
+  return n;
+}
+
+const dW = new Uint8Array(NN), dB = new Uint8Array(NN), kW = new Uint8Array(NN), kB = new Uint8Array(NN);
+
+/**
+ * 计算特征（白方视角）。返回 { f: Float64Array(5), p, w, contested, regionW, regionB }
+ * 行棋方 side 决定 κ 的符号。
+ */
+function features(b, out = new Float64Array(NF)) {
+  const cells = b.cells, qW = b.queens[WHITE], qB = b.queens[BLACK];
+  queenDist(cells, qW, dW); queenDist(cells, qB, dB);
+  kingDist(cells, qW, kW); kingDist(cells, qB, kB);
+  const kap = b.side === WHITE ? KAPPA : -KAPPA;
+  let t1 = 0, t2 = 0, c1 = 0, c2 = 0, w = 0, contested = 0, rW = 0, rB = 0;
+  for (let i = 0; i < NN; i++) {
+    if (cells[i] !== EMPTY) continue;
+    const a = dW[i], c = dB[i];
+    if (a < INF) rW++;
+    if (c < INF) rB++;
+    if (a === INF && c === INF) continue;
+    if (a < c) t1 += 1; else if (a > c) t1 -= 1; else t1 += kap;
+    const ka = kW[i], kc = kB[i];
+    if (ka < kc) t2 += 1; else if (ka > kc) t2 -= 1; else if (ka < INF) t2 += kap;
+    c1 += 2 * (POW2[a] - POW2[c]);
+    let v = (kc - ka) / 6; if (v > 1) v = 1; else if (v < -1) v = -1;
+    c2 += v;
+    if (a < INF && c < INF) { contested++; const diff = a > c ? a - c : c - a; w += POW2[diff]; }
+  }
+  let mob = 0;
+  for (let i = 0; i < 4; i++) { const m = queenMobility(cells, qW[i]); mob += m < 12 ? m : 12; }
+  for (let i = 0; i < 4; i++) { const m = queenMobility(cells, qB[i]); mob -= m < 12 ? m : 12; }
+  out[0] = t1; out[1] = t2; out[2] = c1; out[3] = c2; out[4] = mob / 4;
+  const p = w / W0 > 1 ? 1 : w / W0;
+  return { f: out, p, w, contested, regionW: rW, regionB: rB };
+}
+
+// 分隔后的区域格数：用王距离可达的空格数（剩余步数的上界）
+function separatedScore(b, info) {
+  // info.regionW/B 用后距离可达性统计；分隔后与王距离可达性一致（同一个连通区域）
+  const own = b.side === WHITE ? info.regionW : info.regionB;
+  const opp = b.side === WHITE ? info.regionB : info.regionW;
+  const diff = own - opp - 0.5;            // 步数相同时行棋方先用完，所以减 0.5
+  return (diff > 0 ? SEP_BONUS : -SEP_BONUS) + diff;
+}
+
+const fbuf = new Float64Array(NF);
+/** 行棋方视角的评估值 */
+function evaluate(b, weights = DEFAULT_WEIGHTS) {
+  if (!b.canMove(b.side)) return -WIN;
+  const info = features(b, fbuf);
+  if (info.contested === 0 && !queensTouch(b.cells, b.queens[WHITE])) return separatedScore(b, info);
+  const p = info.p, f = info.f;
+  let s = 0;
+  for (let k = 0; k < NF; k++) s += (p * weights[k] + (1 - p) * weights[NF + k]) * f[k];
+  return b.side === WHITE ? s : -s;
+}
+
+/**
+ * 判断是否已分隔：在“空格 + 后所在格”构成的 8 邻域连通分量中，没有任何一个分量同时含有双方的后。
+ * 注意：只检查“没有空格同时可被双方到达”是不够的——两个敌对的后紧挨着、彼此之间没有空格时，
+ * 任何一方把后移开，空出的格子就会把两块区域连通（第一版实现正是这样判断的，见 5.10 节）。
+ */
+const stk = new Int8Array(NN), seen = new Uint8Array(NN);
+function separated(b) {
+  const cells = b.cells;
+  queenDist(cells, b.queens[WHITE], dW); queenDist(cells, b.queens[BLACK], dB);
+  for (let i = 0; i < NN; i++) if (cells[i] === EMPTY && dW[i] < INF && dB[i] < INF) return false;
+  return !queensTouch(cells, b.queens[WHITE]);
+}
+// 从白方的后出发，在非箭的格子上做 8 邻域洪泛，若能碰到黑方的后则返回 true
+function queensTouch(cells, qW) {
+  seen.fill(0); let top = 0;
+  for (const q of qW) { seen[q] = 1; stk[top++] = q; }
+  while (top) {
+    const x = stk[--top];
+    for (const y of C.NEIGH[x]) {
+      if (seen[y]) continue;
+      const v = cells[y];
+      if (v === ARROW) continue;
+      if (v === BLACK) return true;
+      seen[y] = 1; stk[top++] = y;
+    }
+  }
+  return false;
+}
+
+/** Texel 用：返回 10 维线性特征（白方视角）与是否分隔 */
+function texelFeatures(b) {
+  const info = features(b, new Float64Array(NF));
+  const x = new Array(2 * NF);
+  for (let k = 0; k < NF; k++) { x[k] = info.p * info.f[k]; x[NF + k] = (1 - info.p) * info.f[k]; }
+  return { x, separated: info.contested === 0 && !queensTouch(b.cells, b.queens[WHITE]), p: info.p, w: info.w, regionW: info.regionW, regionB: info.regionB };
+}
+
+/** 供界面使用：每个空格的归属（1 白 / -1 黑 / 0 均势 / null 无人可达）与双方后距离 */
+function territoryMap(b) {
+  const cells = b.cells;
+  const a = queenDist(cells, b.queens[WHITE], new Uint8Array(NN));
+  const c = queenDist(cells, b.queens[BLACK], new Uint8Array(NN));
+  const own = new Array(NN).fill(null);
+  for (let i = 0; i < NN; i++) {
+    if (cells[i] !== EMPTY) continue;
+    if (a[i] === INF && c[i] === INF) own[i] = null;
+    else own[i] = a[i] < c[i] ? 1 : a[i] > c[i] ? -1 : 0;
+  }
+  return { owner: own, dW: Array.from(a), dB: Array.from(c) };
+}
+
+module.exports = { FEATURES, NF, DEFAULT_WEIGHTS, W0, KAPPA, WIN, SEP_BONUS, evaluate, separated, features, texelFeatures, territoryMap, queenDist, kingDist, queenMobility };
+
+};
+__mods["movegen.js"] = function (module, exports, require) {
+/*
+ * movegen.js — 着法的廉价打分与筛选
+ *
+ * 亚马逊棋开局时约有 2176 个合法走法，中局也常有数百个，无法全宽搜索。
+ * 这里给每个走法一个只需常数次查表的“廉价分数”，用于：α-β 的束宽筛选与排序、
+ * MCTS 的渐进展开顺序与先验、贪心与模拟策略。分数由两部分组成：
+ *   后的移动：0.5 ×（到达点的机动性 − 出发点的机动性），机动性截断到 12；
+ *   箭的位置：2 ×（箭旁相邻的对方后数）− 1 ×（箭旁相邻的己方后数）
+ *             + 1 ×（该格对方后距离 ≤ 己方后距离，即对方的领地或均势格）
+ *             + 2^(1−d)（d 为对方后到该格的距离，越靠近对方的后越好）。
+ * 第一项鼓励把后走到开阔处，第二项鼓励用箭封堵对方的后、争夺对方领地而不堵自己。
+ * 这些规则是本文作者根据亚马逊棋的常见经验设定的（Lieberum 2005；Kloetzer 等 2007），
+ * 线性策略（policy.js）用同一组特征从对局数据中学习权重。
+ */
+'use strict';
+const C = require('./core.js');
+const E = require('./eval.js');
+const { NN, EMPTY, INF, RAYS, NEIGH } = C;
+
+const ROW = new Int8Array(NN), COL = new Int8Array(NN);
+for (let i = 0; i < NN; i++) { ROW[i] = (i / 10) | 0; COL[i] = i % 10; }
+function adj(a, b) { const dr = ROW[a] - ROW[b], dc = COL[a] - COL[b]; return a !== b && dr <= 1 && dr >= -1 && dc <= 1 && dc >= -1; }
+
+const dMe = new Uint8Array(NN), dOp = new Uint8Array(NN);
+const oppAdj = new Int8Array(NN), ownAdj = new Int8Array(NN);
+const POW2 = new Float64Array(INF + 1);
+for (let i = 0; i <= INF; i++) POW2[i] = i === 0 ? 0 : Math.pow(2, 1 - i);   // 1, 0.5, 0.25 …（距离 1 记 1）
+const W_DEFAULT = { mob: 0.5, oppAdj: 2, ownAdj: 1, terr: 1 };
+
+// 所有候选走法及分数的缓冲区（容量足够开局局面）
+const MAXM = 4096;
+const bufM = new Int32Array(MAXM), bufS = new Float64Array(MAXM);
+
+/** 预计算结点信息：双方后距离与相邻关系 */
+function prepare(b) {
+  const s = b.side, o = 3 - s, cells = b.cells;
+  E.queenDist(cells, b.queens[s], dMe); E.queenDist(cells, b.queens[o], dOp);
+  oppAdj.fill(0); ownAdj.fill(0);
+  for (const q of b.queens[o]) for (const n of NEIGH[q]) oppAdj[n]++;
+  for (const q of b.queens[s]) for (const n of NEIGH[q]) ownAdj[n]++;
+}
+
+/**
+ * 生成全部走法与廉价分数；返回走法数 n，结果在 bufM/bufS 中。
+ * w 为权重对象（默认 W_DEFAULT）。
+ */
+function scoreAll(b, w = W_DEFAULT) {
+  prepare(b);
+  const s = b.side, cells = b.cells;
+  let n = 0;
+  for (const f of b.queens[s]) {
+    const mobF = Math.min(12, E.queenMobility(cells, f));
+    cells[f] = EMPTY;
+    const rf = RAYS[f];
+    for (let d = 0; d < 8; d++) {
+      const ray = rf[d];
+      for (let k = 0; k < ray.length; k++) {
+        const t = ray[k]; if (cells[t] !== EMPTY) break;
+        const mobT = Math.min(12, E.queenMobility(cells, t));
+        const qs = w.mob * (mobT - mobF);
+        const base = f * 10000 + t * 100, rt = RAYS[t];
+        for (let e = 0; e < 8; e++) {
+          const r2 = rt[e];
+          for (let j = 0; j < r2.length; j++) {
+            const a = r2[j]; if (cells[a] !== EMPTY) break;
+            const own = ownAdj[a] - (adj(a, f) ? 1 : 0) + (adj(a, t) ? 1 : 0);
+            const terr = (dOp[a] <= dMe[a] && dOp[a] < INF ? 1 : 0) + POW2[dOp[a]];
+            bufM[n] = base + a; bufS[n] = qs + w.oppAdj * oppAdj[a] - w.ownAdj * own + w.terr * terr; n++;
+          }
+        }
+      }
+    }
+    cells[f] = s;
+  }
+  return n;
+}
+
+/** 廉价分数最高的 k 个走法（k<=0 表示全部），按分数降序（同分按编码升序，保证确定性）；返回 {moves, scores, total} */
+function topMoves(b, k, w) { return selectTop(scoreAll(b, w), k); }
+
+/*
+ * 可分离评估排序（本文采用的近似，第 2.5 节）：
+ *   score(f→t, a) ≈ Q(f,t) + A(a)，
+ *   Q(f,t)：只移动后、不射箭时的静态评估（行棋方视角）；
+ *   A(a)  ：不移动后、只在 a 处放一支箭时评估值的变化量。
+ * 只需约（后的走法数 + 空格数）次静态评估（中局约 150 次，≈1 ms），就能给全部走法打分，
+ * 比逐个评估全部走法（数百至两千次）便宜一个数量级；在随机中局局面中，
+ * 真正的静态最佳走法有约 90% 落在近似排序的前 8 名（第 5.9 节）。
+ */
+const Qtab = new Float64Array(NN * NN), Atab = new Float64Array(NN);
+function sepScoreAll(b, weights) {
+  const s = b.side, o = 3 - s, cells = b.cells, qs = b.queens[s];
+  // A：只放箭（视角仍为行棋方，评估时轮到对方走，故取负）
+  b.side = o;
+  const e0 = -E.evaluate(b, weights);
+  for (let a = 0; a < NN; a++) {
+    if (cells[a] !== EMPTY) { Atab[a] = 0; continue; }
+    cells[a] = C.ARROW; Atab[a] = -E.evaluate(b, weights) - e0; cells[a] = EMPTY;
+  }
+  b.side = s;
+  let n = 0;
+  for (let qi = 0; qi < 4; qi++) {
+    const f = qs[qi];
+    cells[f] = EMPTY;
+    const rf = RAYS[f];
+    for (let d = 0; d < 8; d++) {
+      const ray = rf[d];
+      for (let k = 0; k < ray.length; k++) {
+        const t = ray[k]; if (cells[t] !== EMPTY) break;
+        cells[t] = s; qs[qi] = t; b.side = o;
+        const q = -E.evaluate(b, weights);
+        b.side = s; qs[qi] = f; cells[t] = EMPTY;
+        const base = f * 10000 + t * 100, rt = RAYS[t];
+        for (let e = 0; e < 8; e++) {
+          const r2 = rt[e];
+          for (let j = 0; j < r2.length; j++) {
+            const a = r2[j]; if (cells[a] !== EMPTY) break;
+            bufM[n] = base + a; bufS[n] = q + (a === f ? 0 : Atab[a]); n++;
+          }
+        }
+      }
+    }
+    cells[f] = s;
+  }
+  return n;
+}
+
+function selectTop(n, k) {
+  if (k <= 0 || k >= n / 4) {
+    const arr = new Array(n); for (let i = 0; i < n; i++) arr[i] = i;
+    arr.sort((x, y) => bufS[y] - bufS[x] || bufM[x] - bufM[y]);
+    const m = k > 0 ? Math.min(k, n) : n;
+    const moves = new Array(m), scores = new Array(m);
+    for (let i = 0; i < m; i++) { moves[i] = bufM[arr[i]]; scores[i] = bufS[arr[i]]; }
+    return { moves, scores, total: n };
+  }
+  const tm = new Int32Array(k), ts = new Float64Array(k); let c = 0;
+  for (let i = 0; i < n; i++) {
+    const v = bufS[i], mv = bufM[i];
+    if (c === k && (v < ts[k - 1] || (v === ts[k - 1] && mv > tm[k - 1]))) continue;
+    let j = c < k ? c++ : k - 1;
+    while (j > 0 && (ts[j - 1] < v || (ts[j - 1] === v && tm[j - 1] > mv))) { ts[j] = ts[j - 1]; tm[j] = tm[j - 1]; j--; }
+    ts[j] = v; tm[j] = mv;
+  }
+  return { moves: Array.from(tm.subarray(0, c)), scores: Array.from(ts.subarray(0, c)), total: n };
+}
+/** 可分离评估排序的前 k 名 */
+function sepTopMoves(b, k, weights) { return selectTop(sepScoreAll(b, weights), k); }
+
+/** 学习策略使用的走法特征（与廉价分数同源，另加若干距离特征）。在 prepare(b) 之后调用 */
+const POLICY_FEATURES = ['mobDelta', 'mobT', 'oppAdj', 'ownAdj', 'terr', 'dOpT1', 'dOpT2', 'arrowNearOpp', 'arrowDist', 'qDist', 'opMobLoss'];
+function moveFeatures(b, m, out = new Float64Array(POLICY_FEATURES.length)) {
+  const s = b.side, cells = b.cells, f = C.mFrom(m), t = C.mTo(m), a = C.mArrow(m);
+  const mobF = Math.min(12, E.queenMobility(cells, f));
+  cells[f] = EMPTY; cells[t] = s;
+  const mobT0 = Math.min(12, E.queenMobility(cells, t));
+  // 箭对对方后机动性的削减量
+  let loss = 0;
+  for (const q of b.queens[3 - s]) {
+    const before = E.queenMobility(cells, q);
+    cells[a] = C.ARROW; const after = E.queenMobility(cells, q); cells[a] = EMPTY;
+    loss += before - after;
+  }
+  cells[t] = EMPTY; cells[f] = s;
+  const own = ownAdj[a] - (adj(a, f) ? 1 : 0) + (adj(a, t) ? 1 : 0);
+  const cheb = (x, y) => Math.max(Math.abs(ROW[x] - ROW[y]), Math.abs(COL[x] - COL[y]));
+  out[0] = (mobT0 - mobF) / 4;
+  out[1] = mobT0 / 12;
+  out[2] = oppAdj[a];
+  out[3] = own;
+  out[4] = dOp[a] <= dMe[a] && dOp[a] < INF ? 1 : 0;
+  out[5] = dOp[t] === 1 ? 1 : 0;
+  out[6] = dOp[t] === 2 ? 1 : 0;
+  out[7] = dOp[a] === 1 ? 1 : 0;
+  out[8] = cheb(a, t) / 9;
+  out[9] = cheb(f, t) / 9;
+  out[10] = loss / 8;
+  return out;
+}
+
+module.exports = { prepare, scoreAll, topMoves, sepScoreAll, sepTopMoves, selectTop, moveFeatures, POLICY_FEATURES, W_DEFAULT, bufM, bufS, adj };
+
+};
+__mods["search.js"] = function (module, exports, require) {
+/*
+ * search.js — α-β 博弈树搜索
+ *
+ * 负极大值（negamax）形式的 α-β 剪枝 + 迭代加深，辅以：
+ *   置换表（Zobrist 哈希，存储深度、分数类型与最佳着法）；
+ *   杀手着法与历史启发；
+ *   主变例搜索（PVS，零窗口试探 + 失败重搜）；
+ *   束宽剪枝：每个结点只搜索排序后的前 width 个走法（排序方式见 candidates）；
+ *   根结点用更宽的候选集合（rootPre 个候选，全部按静态评估排序，搜索前 rootWidth 个）。
+ * 每一项都可以通过选项关闭，用于消融实验（第 5.4 节）。
+ */
+'use strict';
+const C = require('./core.js');
+const E = require('./eval.js');
+const M = require('./movegen.js');
+
+const WIN = E.WIN, WIN_BOUND = WIN - 500;
+const INF = 1e9;
+const EXACT = 0, LOWER = 1, UPPER = 2;
+
+class TimeUp extends Error {}
+
+const DEFAULTS = {
+  timeMs: 200, maxDepth: 30,
+  useTT: true, useKillers: true, useHistory: true, usePVS: true,
+  order: 'sep',                // 内部结点的排序方式：'sep' 可分离评估 / 'cheap' 廉价分数 + 静态评估
+  leafOrder: 'cheap',          // 剩余深度为 1 的结点：'cheap' 取廉价分数前 preWidth 个全部评估 / 'sep'
+  width: 8, preWidth: 24,      // 内部结点束宽；廉价候选数
+  rootPre: 60, rootWidth: 30,  // 根结点：候选数 → 静态评估排序 → 搜索前 rootWidth 个
+  weights: null,               // 评估权重（null 表示默认手工权重）
+  ttBits: 18,
+};
+
+class AlphaBeta {
+  constructor(opts = {}) {
+    this.o = Object.assign({}, DEFAULTS, opts);
+    this.w = this.o.weights || E.DEFAULT_WEIGHTS;
+    const size = 1 << this.o.ttBits;
+    this.ttMask = size - 1;
+    if (this.o.useTT) {
+      this.ttKey = new Int32Array(size); this.ttKey2 = new Int32Array(size);
+      this.ttDepth = new Int8Array(size).fill(-1); this.ttFlag = new Int8Array(size);
+      this.ttVal = new Float64Array(size); this.ttMove = new Int32Array(size);
+    }
+    this.history = new Float64Array(100 * 100 * 2);
+  }
+
+  evaluate(b) { return E.evaluate(b, this.w); }
+
+  /**
+   * 候选生成：返回按优先级排序的走法数组。
+   *  order='sep'  ：内部结点用可分离评估排序取前 width 个（movegen.js）；
+   *  order='cheap'：内部结点先按廉价分数取 preWidth 个，再逐个静态评估、取前 width 个；
+   *  剩余深度为 1 的结点（子结点即叶结点）若 leafOrder='cheap'，直接取廉价分数前 preWidth 个，全部评估。
+   *  根结点：取 rootPre 个候选，逐个静态评估排序，搜索前 rootWidth 个。
+   */
+  candidates(b, depth, ply, ttMove) {
+    const o = this.o;
+    let list;
+    if (ply === 0) {
+      const top = (o.order === 'sep' ? M.sepTopMoves(b, o.rootPre, this.w) : M.topMoves(b, o.rootPre)).moves;
+      const sc = new Array(top.length);
+      for (let i = 0; i < top.length; i++) { b.play(top[i]); sc[i] = -this.evaluate(b); b.undo(); }
+      const idx = top.map((_, i) => i).sort((x, y) => sc[y] - sc[x] || x - y);
+      list = idx.slice(0, o.rootWidth).map(i => top[i]);
+      this.rootStatic = idx.map(i => ({ move: top[i], score: sc[i] }));
+    } else if (depth === 1 && o.leafOrder === 'cheap') {
+      list = M.topMoves(b, o.preWidth).moves;
+    } else if (o.order === 'sep') {
+      list = M.sepTopMoves(b, o.width, this.w).moves;
+    } else {
+      const top = M.topMoves(b, o.preWidth).moves;
+      if (depth >= 2) {
+        const sc = new Array(top.length);
+        for (let i = 0; i < top.length; i++) { b.play(top[i]); sc[i] = -this.evaluate(b); b.undo(); }
+        list = top.map((_, i) => i).sort((x, y) => sc[y] - sc[x] || x - y).slice(0, o.width).map(i => top[i]);
+      } else list = top;
+    }
+    // 杀手着法与历史启发：稳定地把它们提前
+    if (ply !== 0 && (o.useKillers || o.useHistory)) {
+      const k = this.killers[ply] || [];
+      const pri = new Map();
+      list.forEach((m, i) => {
+        let p = -i;                                         // 原顺序
+        if (o.useHistory) p += Math.min(4, this.history[(C.mFrom(m) * 100 + C.mTo(m)) * 2 + (b.side - 1)] / 1e3);
+        if (o.useKillers && (m === k[0] || m === k[1])) p += 1000;
+        pri.set(m, p);
+      });
+      list.sort((x, y) => pri.get(y) - pri.get(x));
+    }
+    if (ttMove > 0) {
+      const j = list.indexOf(ttMove);
+      if (j > 0) { list.splice(j, 1); list.unshift(ttMove); }
+      else if (j < 0 && b.isLegal(ttMove)) list.unshift(ttMove);
+    }
+    return list;
+  }
+
+  search(b0) {
+    const o = this.o;
+    const b = b0.clone();
+    this.t0 = Date.now(); this.deadline = this.t0 + o.timeMs;
+    this.nodes = 0; this.cutoffs = 0; this.firstCutoffs = 0; this.ttHits = 0; this.interior = 0; this.killers = []; this.history.fill(0); this.lastBest = 0; this.rootStatic = null;
+    if (o.useTT) this.ttDepth.fill(-1);
+    const iters = [];
+    let best = -1, bestScore = 0, depthDone = 0, pv = [], rootScores = [], partialUsed = false;
+    for (let d = 1; d <= o.maxDepth; d++) {
+      this.rootDepth = d;
+      try {
+        const r = this.root(b, d);
+        best = r.move; bestScore = r.score; depthDone = d; rootScores = r.scores;
+        pv = this.extractPV(b, best, d);
+        iters.push({ depth: d, move: C.moveToStr(best), score: +bestScore.toFixed(2), nodes: this.nodes, ms: Date.now() - this.t0 });
+        if (o.onIteration) o.onIteration(Object.assign({ pv: pv.map(C.moveToStr) }, iters[iters.length - 1]));
+        if (Math.abs(bestScore) > WIN_BOUND) break;          // 已找到胜负
+        const el = Date.now() - this.t0;
+        if (el > o.timeMs * 0.5) break;                      // 剩余时间不足一半时不再开始新的一层
+      } catch (e) {
+        if (!(e instanceof TimeUp)) throw e;
+        // 未完成的一层：若上一层的最佳着法已在本层搜完，则可采用本层已搜完部分中的最佳着法
+        const p = this.partial;
+        if (p && p.count >= 1 && p.move !== best) {
+          best = p.move; bestScore = p.score; partialUsed = true;
+          iters.push({ depth: d, move: C.moveToStr(best), score: +bestScore.toFixed(2), nodes: this.nodes, ms: Date.now() - this.t0, partial: p.count });
+        }
+        break;
+      }
+    }
+    if (best < 0) best = this.rootStatic && this.rootStatic.length ? this.rootStatic[0].move : b.genMoves()[0];
+    return {
+      move: best, score: bestScore, depth: depthDone, nodes: this.nodes, timeMs: Date.now() - this.t0,
+      reason: 'search', pv: pv.map(C.moveToStr), iterations: iters, partialUsed,
+      stats: { cutoffs: this.cutoffs, firstCutoffs: this.firstCutoffs, ttHits: this.ttHits, interior: this.interior },
+      rootMoves: rootScores.slice(0, 12).map(x => ({ move: x.move, score: x.score })),
+    };
+  }
+
+  root(b, depth) {
+    const o = this.o;
+    const moves = this.candidates(b, depth, 0, depth > 1 ? this.lastBest : 0);
+    let alpha = -INF, beta = INF, best = moves[0], bestV = -INF;
+    const scores = [];
+    this.partial = null;
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
+      b.play(m);
+      let v;
+      if (i === 0 || !o.usePVS) v = -this.negamax(b, depth - 1, -beta, -alpha, 1);
+      else {
+        v = -this.negamax(b, depth - 1, -alpha - 1e-6, -alpha, 1);
+        if (v > alpha) v = -this.negamax(b, depth - 1, -beta, -alpha, 1);
+      }
+      b.undo();
+      scores.push({ move: m, score: v });
+      if (v > bestV) { bestV = v; best = m; }
+      if (v > alpha) alpha = v;
+      this.partial = { move: best, score: bestV, count: i + 1 };
+    }
+    this.lastBest = best;
+    scores.sort((x, y) => y.score - x.score);
+    return { move: best, score: bestV, scores };
+  }
+
+  negamax(b, depth, alpha, beta, ply) {
+    const o = this.o;
+    if ((++this.nodes & 7) === 0 && Date.now() > this.deadline) throw new TimeUp();
+    if (!b.canMove(b.side)) return -WIN + ply;
+    if (depth <= 0) return this.evaluate(b);
+    const a0 = alpha;
+    let ttMove = 0, slot = -1;
+    if (o.useTT) {
+      slot = b.hashLo & this.ttMask;
+      if (this.ttKey[slot] === b.hashLo && this.ttKey2[slot] === b.hashHi && this.ttDepth[slot] >= 0) {
+        ttMove = this.ttMove[slot];
+        if (this.ttDepth[slot] >= depth) {
+          const v = this.ttVal[slot], f = this.ttFlag[slot];
+          this.ttHits++;
+          if (f === EXACT) return v;
+          if (f === LOWER && v >= beta) return v;
+          if (f === UPPER && v <= alpha) return v;
+        }
+      }
+    }
+    const sv = this.evaluate(b);
+    if (Math.abs(sv) >= E.SEP_BONUS - 60 && Math.abs(sv) < WIN_BOUND) return sv;   // 已分隔：区域计数即为估计
+    const moves = this.candidates(b, depth, ply, ttMove);
+    this.interior++;
+    let best = -INF, bestM = moves[0];
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
+      b.play(m);
+      let v;
+      if (i === 0 || !o.usePVS) v = -this.negamax(b, depth - 1, -beta, -alpha, ply + 1);
+      else {
+        v = -this.negamax(b, depth - 1, -alpha - 1e-6, -alpha, ply + 1);
+        if (v > alpha && v < beta) v = -this.negamax(b, depth - 1, -beta, -alpha, ply + 1);
+      }
+      b.undo();
+      if (v > best) { best = v; bestM = m; }
+      if (v > alpha) alpha = v;
+      if (alpha >= beta) {
+        this.cutoffs++; if (i === 0) this.firstCutoffs++;
+        if (o.useKillers) {
+          const k = this.killers[ply] || (this.killers[ply] = [0, 0]);
+          if (k[0] !== m) { k[1] = k[0]; k[0] = m; }
+        }
+        if (o.useHistory) this.history[(C.mFrom(m) * 100 + C.mTo(m)) * 2 + (b.side - 1)] += depth * depth;
+        break;
+      }
+    }
+    if (o.useTT) {
+      this.ttKey[slot] = b.hashLo; this.ttKey2[slot] = b.hashHi; this.ttDepth[slot] = depth;
+      this.ttVal[slot] = best; this.ttMove[slot] = bestM;
+      this.ttFlag[slot] = best <= a0 ? UPPER : best >= beta ? LOWER : EXACT;
+    }
+    return best;
+  }
+
+  extractPV(b, first, depth) {
+    const pv = [first];
+    if (!this.o.useTT) return pv;
+    const c = b.clone(); c.play(first);
+    for (let i = 1; i < depth; i++) {
+      const slot = c.hashLo & this.ttMask;
+      if (!(this.ttKey[slot] === c.hashLo && this.ttKey2[slot] === c.hashHi && this.ttDepth[slot] >= 0)) break;
+      const m = this.ttMove[slot];
+      if (!c.isLegal(m)) break;
+      pv.push(m); c.play(m);
+    }
+    return pv;
+  }
+}
+
+module.exports = { AlphaBeta, DEFAULTS, WIN, WIN_BOUND, TimeUp };
+
+};
+__mods["mcts.js"] = function (module, exports, require) {
+/*
+ * mcts.js — 蒙特卡洛树搜索
+ *
+ * 四个步骤：选择（UCT 或 PUCT）、扩展、模拟、回传。可配置的部分：
+ *   order   ：子结点的展开顺序。'random' 为随机打乱全部合法走法；'heuristic' 为按廉价分数
+ *             取前 maxCand 个；'sep' 为按可分离评估排序取前 maxCand 个；'learned' 为按学习策略的概率排序（同时提供 PUCT 先验）。
+ *   pw      ：渐进展开（progressive widening），结点访问 n 次时最多展开 ⌈pwC·n^pwA⌉ 个子结点；
+ *             关闭时每次访问展开一个新子结点，直到全部展开（标准 UCT）。
+ *   rollout ：'random' 随机下到终局；'cutoff' 随机走 cutoff 步后用评估函数估计胜率（Lorentz 2008）；
+ *             'eval' 不模拟，直接评估叶结点。
+ *   sepCheck：双方已被分隔时，直接用区域格数判定胜负，不再模拟。
+ * 胜率估计 p = 1 / (1 + exp(−k·v))，v 为评估值（行棋方视角）。
+ */
+'use strict';
+const C = require('./core.js');
+const E = require('./eval.js');
+const M = require('./movegen.js');
+
+const DEFAULTS = {
+  timeMs: 200, maxSims: 0, seed: 1,
+  selection: 'uct', cUct: 0.5, cPuct: 1.5,
+  order: 'heuristic', maxCand: 60, tau: 4,
+  pw: true, pwC: 2, pwA: 0.5,
+  rollout: 'cutoff', cutoff: 4, k: 0.18,
+  sepCheck: true, winCheck: true, weights: null, policyModel: null,
+};
+
+class Node {
+  constructor(parent, move, prior) {
+    this.parent = parent; this.move = move; this.prior = prior;
+    this.children = []; this.n = 0; this.w = 0;            // w：从“走入本结点的一方”看的累计收益
+    this.cand = null; this.candP = null; this.next = 0;    // 待展开的候选走法
+    this.terminal = 0;                                     // 1：走入本结点的一方已获胜（对方无子可动）
+  }
+}
+
+class MCTS {
+  constructor(opts = {}) {
+    this.o = Object.assign({}, DEFAULTS, opts);
+    this.rng = C.mulberry32(this.o.seed || 1);
+    this.w = this.o.weights || E.DEFAULT_WEIGHTS;
+  }
+
+  initCandidates(node, b) {
+    const o = this.o;
+    if (o.order === 'random') {
+      const ms = b.genMoves();
+      for (let i = ms.length - 1; i > 0; i--) { const j = (this.rng() * (i + 1)) | 0; const t = ms[i]; ms[i] = ms[j]; ms[j] = t; }
+      node.cand = ms; node.candP = null;
+    } else if (o.order === 'learned') {
+      const r = o.policyModel.rank(b, o.maxCand);
+      node.cand = r.moves; node.candP = r.probs;
+    } else {
+      const r = o.order === 'sep' ? M.sepTopMoves(b, o.maxCand, this.w) : M.topMoves(b, o.maxCand);
+      node.cand = r.moves;
+      // 启发式先验：对排序分数做 softmax（仅在 PUCT 下使用；温度 tau）
+      const mx = r.scores[0] || 0; let z = 0;
+      const p = r.scores.map(s => { const e = Math.exp((s - mx) / o.tau); z += e; return e; });
+      node.candP = p.map(x => x / z);
+    }
+  }
+
+  canExpand(node) {
+    if (node.next >= node.cand.length) return false;
+    if (!this.o.pw) return true;
+    return node.children.length < Math.ceil(this.o.pwC * Math.pow(node.n + 1, this.o.pwA));
+  }
+
+  select(node) {
+    const o = this.o;
+    let best = null, bv = -Infinity;
+    const lnN = Math.log(node.n + 1), sq = Math.sqrt(node.n + 1);
+    for (const c of node.children) {
+      if (c.terminal) return c;                             // 一步制胜
+      const q = c.n ? c.w / c.n : 0.5;
+      const u = o.selection === 'puct'
+        ? q + o.cPuct * c.prior * sq / (1 + c.n)
+        : q + o.cUct * Math.sqrt(lnN / (c.n + 1e-9));
+      if (u > bv) { bv = u; best = c; }
+    }
+    return best;
+  }
+
+  // 叶结点价值：返回“行棋方”的胜率估计
+  leafValue(b) {
+    const o = this.o;
+    if (!b.canMove(b.side)) return 0;
+    if (o.rollout === 'random') return this.randomPlayout(b, 400);
+    if (o.rollout === 'eval') return this.evalToProb(b);
+    // cutoff：随机走 cutoff 步后评估
+    const s0 = b.side; let k = 0;
+    for (; k < o.cutoff; k++) {
+      if (!b.canMove(b.side)) break;
+      b.play(b.randomMove(this.rng));
+    }
+    let v;
+    if (!b.canMove(b.side)) v = b.side === s0 ? 0 : 1;
+    else { const p = this.evalToProb(b); v = b.side === s0 ? p : 1 - p; }
+    for (let i = 0; i < k; i++) b.undo();
+    return v;
+  }
+  evalToProb(b) {
+    const v = E.evaluate(b, this.w);
+    return 1 / (1 + Math.exp(-this.o.k * v));
+  }
+  randomPlayout(b, cap) {
+    const s0 = b.side; let k = 0;
+    while (k < cap && b.canMove(b.side)) { b.play(b.randomMove(this.rng)); k++; }
+    const v = b.canMove(b.side) ? 0.5 : (b.side === s0 ? 0 : 1);
+    for (let i = 0; i < k; i++) b.undo();
+    return v;
+  }
+
+  search(b0) {
+    const o = this.o;
+    const b = b0.clone();
+    const t0 = Date.now(), deadline = t0 + o.timeMs;
+    const root = new Node(null, -1, 1);
+    this.initCandidates(root, b);
+    // 一步制胜检查：走完后对方无子可动
+    if (o.winCheck) for (const m of b.genMoves()) { b.play(m); const win = !b.canMove(b.side); b.undo(); if (win) return { move: m, reason: 'win', simulations: 0, winrate: 1, timeMs: Date.now() - t0 }; }
+    let sims = 0, maxDepth = 0, depthSum = 0;
+    while (true) {
+      if (o.maxSims ? sims >= o.maxSims : ((sims & 15) === 0 && Date.now() >= deadline)) break;
+      let node = root, d = 0;
+      // 1. 选择 / 2. 扩展
+      while (true) {
+        if (node.terminal) break;
+        if (!node.cand) this.initCandidates(node, b);
+        if (this.canExpand(node)) {
+          const m = node.cand[node.next];
+          const p = node.candP ? node.candP[node.next] : 1 / node.cand.length;
+          node.next++;
+          const c = new Node(node, m, p);
+          node.children.push(c);
+          b.play(m); d++;
+          if (!b.canMove(b.side)) c.terminal = 1;
+          node = c;
+          break;
+        }
+        if (!node.children.length) break;
+        node = this.select(node);
+        b.play(node.move); d++;
+      }
+      // 3. 模拟：value 为“走入 node 的一方”的收益
+      let value;
+      if (node.terminal) value = 1;
+      else if (o.sepCheck && E.separated(b)) {
+        const v = E.evaluate(b, this.w); value = v > 0 ? 0 : 1;
+      } else value = 1 - this.leafValue(b);
+      // 4. 回传
+      for (let x = node; x; x = x.parent) { x.n++; x.w += value; value = 1 - value; }
+      for (let i = 0; i < d; i++) b.undo();
+      sims++; depthSum += d; if (d > maxDepth) maxDepth = d;
+      if (o.onProgress && (sims & 63) === 0) {
+        const now = Date.now();
+        if (!this._lastProg || now - this._lastProg >= 150) {
+          this._lastProg = now;
+          let bc = null; for (const c of root.children) if (!bc || c.n > bc.n) bc = c;
+          o.onProgress({ simulations: sims, ms: now - t0, best: C.moveToStr(bc.move), winrate: bc.w / Math.max(1, bc.n), maxDepth });
+        }
+      }
+    }
+    let best = null;
+    for (const c of root.children) if (!best || c.n > best.n || (c.n === best.n && c.w > best.w)) best = c;
+    if (!best) { const ms = M.topMoves(b, 1).moves; return { move: ms[0], reason: 'fallback', simulations: sims, winrate: 0.5, timeMs: Date.now() - t0 }; }
+    const kids = root.children.slice().sort((x, y) => y.n - x.n);
+    // 主变例：沿访问次数最多的子结点下降
+    const pv = []; for (let x = best; x; ) { pv.push(C.moveToStr(x.move)); let nb = null; for (const c of x.children) if (!nb || c.n > nb.n) nb = c; if (!nb || nb.n < 2) break; x = nb; if (pv.length >= 8) break; }
+    return {
+      move: best.move, reason: 'mcts', simulations: sims, winrate: best.w / Math.max(1, best.n),
+      selDepth: maxDepth, avgDepth: sims ? depthSum / sims : 0, timeMs: Date.now() - t0, pv,
+      rootChildren: root.children.length,
+      rootMoves: kids.slice(0, 12).map(c => ({ move: c.move, visits: c.n, winrate: c.n ? c.w / c.n : 0, prior: c.prior })),
+    };
+  }
+}
+
+module.exports = { MCTS, DEFAULTS };
+
+};
+__mods["policy.js"] = function (module, exports, require) {
+/*
+ * policy.js — 线性 softmax 走子策略
+ *
+ * π(m | s) ∝ exp(θ · φ(s, m))，φ 为 movegen.js 中定义的 11 维走法特征，外加该走法的
+ * 可分离评估分数（相对于候选中最高分的差值，单位：格），共 12 维。
+ * 由于合法走法太多，先用可分离评估取前 pre 个候选，再在候选集合内计算 softmax。
+ * θ 由 learning/train_policy.py 从 α-β 自对弈棋谱中用最大似然拟合。
+ */
+'use strict';
+const M = require('./movegen.js');
+
+const NF = M.POLICY_FEATURES.length + 1;
+/** 候选集合与特征矩阵（训练数据提取与推断共用，保证一致） */
+function candidateFeatures(b, pre) {
+  const r = M.sepTopMoves(b, pre);
+  M.prepare(b);
+  const feats = r.moves.map((m, i) => {
+    const phi = new Float64Array(NF);
+    M.moveFeatures(b, m, phi);
+    phi[NF - 1] = (r.scores[i] - r.scores[0]) / 4;
+    return phi;
+  });
+  return { moves: r.moves, sepScores: r.scores, feats };
+}
+
+class LinearPolicy {
+  constructor(theta, pre = 40) { this.theta = theta; this.pre = pre; }
+  /** 返回概率最高的 k 个走法及其（在候选集合内归一化的）概率 */
+  rank(b, k) {
+    const c = candidateFeatures(b, this.pre), th = this.theta;
+    const cand = c.moves;
+    const lg = c.feats.map(phi => { let z = 0; for (let i = 0; i < th.length; i++) z += th[i] * phi[i]; return z; });
+    const mx = Math.max(...lg); let z = 0;
+    const p = lg.map(x => { const e = Math.exp(x - mx); z += e; return e / 1; });
+    const idx = cand.map((_, i) => i).sort((x, y) => p[y] - p[x] || x - y).slice(0, k);
+    return { moves: idx.map(i => cand[i]), probs: idx.map(i => p[i] / z) };
+  }
+}
+
+module.exports = { LinearPolicy, candidateFeatures, NF, FEATURE_NAMES: M.POLICY_FEATURES.concat(['sepScore']) };
+
+};
+__mods["agents.js"] = function (module, exports, require) {
+/*
+ * agents.js — 统一的智能体接口与预设配置
+ *
+ * 每个智能体实现 think(board) → { move, ...诊断信息 }。
+ * 实验脚本、网页界面与单元测试都通过 makeAgent(name, overrides) 创建智能体，
+ * 保证“游戏里运行的算法”与“报告中测量的算法”是同一份代码。
+ *
+ * 双方被完全分隔后（填格阶段），除随机智能体外，所有智能体都改用同一个填格策略 fillerMove，
+ * 使实验比较集中在双方仍有接触的阶段（第 2.6 节）。
+ */
+'use strict';
+const C = require('./core.js');
+const E = require('./eval.js');
+const M = require('./movegen.js');
+const { AlphaBeta } = require('./search.js');
+const { MCTS } = require('./mcts.js');
+const { LinearPolicy } = require('./policy.js');
+
+/**
+ * 填格策略：在已分隔的局面中，选择走完后“己方可达空格数”最大的走法；
+ * 同分时优先把箭射在周围空格最少的位置（先填死角，减少对自身区域的切割）。
+ */
+const kbuf = new Uint8Array(C.NN);
+function reachable(b, side) {
+  E.kingDist(b.cells, b.queens[side], kbuf);
+  let n = 0; for (let i = 0; i < C.NN; i++) if (b.cells[i] === C.EMPTY && kbuf[i] < C.INF) n++;
+  return n;
+}
+function fillerMove(b) {
+  const s = b.side, ms = b.genMoves();
+  let best = ms[0], bv = -Infinity;
+  for (const m of ms) {
+    const a = C.mArrow(m);
+    b.play(m);
+    let free = 0; for (const x of C.NEIGH[a]) if (b.cells[x] === C.EMPTY) free++;
+    const v = reachable(b, s) * 10 - free;
+    b.undo();
+    if (v > bv) { bv = v; best = m; }
+  }
+  return best;
+}
+
+function maybeFiller(b, o, t0) {
+  if (o.filler === false) return null;
+  if (!E.separated(b)) return null;
+  return { move: fillerMove(b), reason: 'filler', score: E.evaluate(b, o.weights || undefined), timeMs: Date.now() - t0 };
+}
+
+class RandomAgent {
+  constructor(o = {}) { this.rng = C.mulberry32(o.seed || 1); this.o = o; }
+  think(b) {
+    const t0 = Date.now();
+    const ms = b.genMoves();
+    return { move: ms[(this.rng() * ms.length) | 0], reason: 'random', timeMs: Date.now() - t0 };
+  }
+}
+
+/** 一步贪心：枚举全部合法走法，取走完后静态评估最好的一步 */
+class GreedyAgent {
+  constructor(o = {}) { this.o = o; this.w = o.weights || E.DEFAULT_WEIGHTS; }
+  think(b0) {
+    const t0 = Date.now();
+    const f = maybeFiller(b0, this.o, t0); if (f) return f;
+    const b = b0.clone();
+    let best = -1, bv = -Infinity;
+    for (const m of b.genMoves()) { b.play(m); const v = -E.evaluate(b, this.w); b.undo(); if (v > bv) { bv = v; best = m; } }
+    return { move: best, reason: 'greedy', score: bv, timeMs: Date.now() - t0 };
+  }
+}
+
+class ABAgent {
+  constructor(o = {}) { this.o = o; this.engine = new AlphaBeta(o); }
+  think(b) { const f = maybeFiller(b, this.o, Date.now()); return f || this.engine.search(b); }
+}
+class MCTSAgent {
+  constructor(o = {}) { this.o = o; this.engine = new MCTS(o); }
+  think(b) { const f = maybeFiller(b, this.o, Date.now()); return f || this.engine.search(b); }
+}
+
+// 预设：实验与界面共用
+const PRESETS = {
+  'random': { kind: 'random' },
+  'greedy': { kind: 'greedy' },
+  // α-β 完整版与消融
+  'ab': { kind: 'ab' },
+  'ab-noTT': { kind: 'ab', useTT: false },
+  'ab-noKiller': { kind: 'ab', useKillers: false, useHistory: false },
+  'ab-noPVS': { kind: 'ab', usePVS: false },
+  'ab-cheapOrder': { kind: 'ab', order: 'cheap' },
+  'ab-sepLeaf': { kind: 'ab', leafOrder: 'sep' },
+  'ab-wide': { kind: 'ab', width: 16, preWidth: 48, rootPre: 120, rootWidth: 60 },
+  'ab-narrow': { kind: 'ab', width: 4, preWidth: 12, rootPre: 30, rootWidth: 15 },
+  'ab-simpleEval': { kind: 'ab', weights: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0] },
+  'ab-tuned': { kind: 'ab', weights: 'tuned' },
+  'ab-plain': { kind: 'ab', useTT: false, useKillers: false, useHistory: false, usePVS: false },
+  // MCTS 系列
+  'mcts-pure': { kind: 'mcts', selection: 'uct', order: 'random', pw: false, rollout: 'random', sepCheck: false, winCheck: false, filler: false },
+  'mcts-uct': { kind: 'mcts', selection: 'uct', order: 'random', pw: false, rollout: 'cutoff' },
+  'mcts-pw': { kind: 'mcts', selection: 'uct', order: 'heuristic', pw: true, rollout: 'random' },
+  'mcts-cutoff': { kind: 'mcts', selection: 'uct', order: 'heuristic', pw: true, rollout: 'cutoff' },
+  'mcts-sep': { kind: 'mcts', selection: 'uct', order: 'sep', pw: true, rollout: 'cutoff', maxCand: 30 },
+  'mcts-puct': { kind: 'mcts', selection: 'puct', order: 'sep', pw: true, rollout: 'cutoff', maxCand: 30 },
+  'mcts-learned': { kind: 'mcts', selection: 'puct', order: 'learned', pw: true, rollout: 'cutoff', maxCand: 30 },
+};
+
+let POLICY_THETA = null;
+let TUNED_WEIGHTS = null;
+function setPolicyTheta(theta) { POLICY_THETA = theta; }
+function setTunedWeights(w) { TUNED_WEIGHTS = w; }
+
+function makeAgent(name, overrides = {}) {
+  const base = PRESETS[name];
+  if (!base) throw new Error('unknown agent ' + name);
+  const o = Object.assign({}, base, overrides);
+  if (o.weights === 'tuned') {
+    if (!TUNED_WEIGHTS) throw new Error('tuned weights not loaded');
+    o.weights = TUNED_WEIGHTS;
+  }
+  if (o.order === 'learned' && !o.policyModel) {
+    if (!POLICY_THETA) throw new Error('policy weights not loaded');
+    o.policyModel = new LinearPolicy(POLICY_THETA);
+  }
+  switch (o.kind) {
+    case 'random': return new RandomAgent(o);
+    case 'greedy': return new GreedyAgent(o);
+    case 'ab': return new ABAgent(o);
+    case 'mcts': return new MCTSAgent(o);
+  }
+  throw new Error('bad kind');
+}
+
+module.exports = { RandomAgent, GreedyAgent, ABAgent, MCTSAgent, PRESETS, makeAgent, setPolicyTheta, setTunedWeights, fillerMove };
+
+};
+__mods["index.js"] = function (module, exports, require) {
+'use strict';
+// 引擎入口：汇总导出（Node.js 与浏览器打包共用）
+const C = require('./core.js');
+const E = require('./eval.js');
+const M = require('./movegen.js');
+const S = require('./search.js');
+const T = require('./mcts.js');
+const A = require('./agents.js');
+const P = require('./policy.js');
+module.exports = Object.assign({}, C, { Eval: E, MoveGen: M, Search: S, MCTSMod: T, Policy: P }, A, { evaluate: E.evaluate, territoryMap: E.territoryMap });
+
+};
+global.AmazonsAI = require("index.js");
+})(typeof self !== "undefined" ? self : this);
+
+var POLICY_THETA = [0.6295092823502955,-2.004500152156739,0.748196914581747,-0.2299345775408607,0.004092210498283419,1.1928124973633636,0.7980049776373085,0.062304723697199305,1.03684000493638,-0.794630683854228,1.4921354078610356,0.15088203228036853];
+var TUNED_WEIGHTS = [-0.05526782313673007,-0.054805310644464277,-0.10936717048019039,0.24610182719556808,0.5153228224554195,1.4452197739453307,0.8639306145964015,0.13300242979083382,0.3312270074708409,0.4689434139817843];
+var WIN_K = 0.2604071104946248;
+var AI_LIST_CFG = [{"id":"ab","name":"α-β 搜索（PVS + 可分离排序）","short":"α-β"},{"id":"mcts-puct","name":"MCTS · PUCT + 可分离先验 + 评估截断","short":"MCTS-PUCT"},{"id":"mcts-learned","name":"MCTS · 学习先验","short":"MCTS-学习","needPolicy":true},{"id":"ab-tuned","name":"α-β · Texel 学习权重","short":"α-β-Texel","needTuned":true},{"id":"mcts-cutoff","name":"MCTS · UCT + 评估截断","short":"MCTS-截断"},{"id":"mcts-pure","name":"MCTS · 纯随机模拟","short":"MCTS-纯随机"},{"id":"greedy","name":"贪心 · 一步评估","short":"贪心"},{"id":"random","name":"随机走子","short":"随机"}];
+var OPENINGS = [["d1-d8/f10","g10-g5/a5"],["d1-d8/f10","a7-e3/e7"],["d1-d8/j8","g10-g5/i5"],["a4-d7/i7","g10-g2/j5"],["d1-d7/b7","a7-d4/d6"],["d1-d9/f9","g10-g2/i4"],["g1-g7/g9","d10-d5/a5"],["j4-g7/b7","d10-d5/a5"],["d1-d7/b7","g10-g4/i4"],["g1-g8/i8","d10-d5/i5"],["d1-d9/a6","g10-g4/g2"],["g1-g8/i6","d10-d3/a3"],["d1-d8/i8","g10-g5/j5"],["g1-g8/e10","d10-d2/b4"],["d1-d7/i7","g10-g5/d8"],["g1-g8/e10","d10-d3/h7"],["d1-d8/a8","a7-e3/b3"],["d1-d7/f9","g10-g2/c6"],["g1-g7/b7","d10-d4/b4"],["g1-g8/i6","d10-d5/j5"],["d1-d7/d9","a7-e3/e7"],["d1-d8/b8","a7-e3/e8"],["d1-d9/f9","g10-g4/b4"],["a4-d7/i7","g10-g6/g2"],["d1-d9/f9","g10-g3/a3"],["d1-d9/g9","a7-e3/a3"],["d1-d8/b6","j7-g4/g2"],["g1-g7/g9","d10-d5/j5"],["d1-d7/f9","g10-g5/g2"],["g1-g8/j8","a7-e3/a3"],["g1-g7/e9","d10-d4/b4"],["g1-g8/a8","a7-d4/d2"]];
+
+/*
+ * worker.js — 在 Web Worker 中运行 AI 搜索，避免阻塞界面。
+ * 打包时 build.js 会把引擎代码拼接在本文件之前，全局对象 AmazonsAI 可直接使用。
+ * 消息协议：
+ *   主线程 → worker: { type: 'think', id, moves: [着法字符串...], agent, opts }
+ *   worker → 主线程: { type: 'progress', id, data } / { type: 'result', id, data } / { type: 'error', id, message }
+ */
+/* global AmazonsAI, POLICY_THETA, TUNED_WEIGHTS */
+(function () {
+  const G = AmazonsAI;
+  if (typeof POLICY_THETA !== 'undefined' && POLICY_THETA) G.setPolicyTheta(POLICY_THETA);
+  if (typeof TUNED_WEIGHTS !== 'undefined' && TUNED_WEIGHTS) G.setTunedWeights(TUNED_WEIGHTS);
+
+  self.onmessage = function (ev) {
+    const msg = ev.data;
+    if (msg.type !== 'think') return;
+    const id = msg.id;
+    try {
+      const b = G.Board.fromMoves(msg.moves);
+      const opts = Object.assign({}, msg.opts || {});
+      if (msg.agent.startsWith('ab')) opts.onIteration = it => self.postMessage({ type: 'progress', id, data: { kind: 'ab', iteration: it } });
+      else if (msg.agent.startsWith('mcts')) opts.onProgress = rep => self.postMessage({ type: 'progress', id, data: Object.assign({ kind: 'mcts' }, rep) });
+      const agent = G.makeAgent(msg.agent, opts);
+      const t0 = Date.now();
+      const r = agent.think(b);
+      const out = {
+        move: G.moveToStr(r.move), reason: r.reason, score: r.score, depth: r.depth, selDepth: r.selDepth, nodes: r.nodes,
+        timeMs: r.timeMs, wallMs: Date.now() - t0, pv: r.pv, iterations: r.iterations, partialUsed: r.partialUsed,
+        simulations: r.simulations, winrate: r.winrate, avgDepth: r.avgDepth, rootChildren: r.rootChildren,
+        rootMoves: (r.rootMoves || []).map(x => Object.assign({}, x, { move: G.moveToStr(x.move) })),
+      };
+      self.postMessage({ type: 'result', id, data: out });
+    } catch (e) {
+      self.postMessage({ type: 'error', id, message: String(e && e.stack || e) });
+    }
+  };
+})();
+</script>
+<script>/*
+ * app.js — 亚马逊棋 AI 实验台的界面逻辑
+ * 引擎（AmazonsAI）在主线程中只用于规则判定与领地计算，搜索在 Web Worker 中执行。
+ * 走一步分三次点击：选择己方的后 → 选择目的地 → 选择射箭位置。
+ */
+/* global AmazonsAI, POLICY_THETA, TUNED_WEIGHTS, OPENINGS, AI_LIST_CFG, WIN_K */
+(function () {
+  'use strict';
+  const G = AmazonsAI;
+  const N = G.N;
+  const $ = id => document.getElementById(id);
+  const hasPolicy = typeof POLICY_THETA !== 'undefined' && POLICY_THETA;
+  const hasTuned = typeof TUNED_WEIGHTS !== 'undefined' && TUNED_WEIGHTS;
+  if (hasPolicy) G.setPolicyTheta(POLICY_THETA);
+  if (hasTuned) G.setTunedWeights(TUNED_WEIGHTS);
+  const K = typeof WIN_K !== 'undefined' && WIN_K ? WIN_K : 0.15;   // 评估值 → 胜率 的换算系数
+
+  // ---------------------------------------------------------------- 配置
+  const AI_LIST = (typeof AI_LIST_CFG !== 'undefined' ? AI_LIST_CFG : [
+    { id: 'ab', name: 'α-β 搜索（最强）', short: 'α-β' },
+    { id: 'mcts-puct', name: 'MCTS · PUCT + 评估截断', short: 'MCTS-PUCT' },
+    { id: 'mcts-cutoff', name: 'MCTS · UCT + 评估截断', short: 'MCTS-截断' },
+    { id: 'mcts-pure', name: 'MCTS · 纯随机模拟', short: 'MCTS-纯随机' },
+    { id: 'greedy', name: '贪心 · 一步评估', short: '贪心' },
+    { id: 'random', name: '随机走子', short: '随机' },
+  ]).filter(a => (!a.needPolicy || hasPolicy) && (!a.needTuned || hasTuned));
+  const THINK_STEPS = [100, 250, 500, 1000, 2000, 3000, 5000];
+  const MODE_DESC = { hw: ['玩家', 'AI'], hb: ['AI', '玩家'], aa: ['AI', 'AI'], hh: ['玩家', '玩家'] };
+
+  // ---------------------------------------------------------------- 状态
+  let board = new G.Board();
+  let evalHist = [0.5];         // evalHist[k] = 第 k 手后白方胜率估计（null 表示无）
+  let result = null;            // 最近一次搜索结果 { key, side, agent, data }
+  let live = null;              // 搜索进行中的中间结果
+  let hint = null;              // 提示着法（字符串）
+  let sel = { from: -1, to: -1 };   // 人类走子的中间状态
+  let legal = null;             // 当前局面全部合法走法（整数）
+  let worker = null, jobId = 0, busy = false, paused = false, gameOverShown = false;
+
+  // ---------------------------------------------------------------- Worker
+  function makeWorker() {
+    if (worker) worker.terminate();
+    const src = $('workerSrc').textContent;
+    const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    worker = new Worker(url);
+    worker.onmessage = onWorkerMsg;
+    worker.onerror = e => { setStatus('Worker 出错：' + e.message, false); busy = false; };
+  }
+  function cancelSearch() {
+    if (busy) { makeWorker(); busy = false; }
+    live = null; showThinking(false);
+  }
+  function posKey(b) { return b.history.join(','); }
+
+  function requestSearch(purpose) {
+    const side = board.side;
+    const agent = side === G.WHITE ? $('aiWhite').value : $('aiBlack').value;
+    const timeMs = THINK_STEPS[+$('think').value];
+    const id = ++jobId;
+    busy = true; live = null;
+    showThinking(true, purpose === 'hint' ? '正在为你分析…' : `${aiName(agent)} 思考中…`);
+    setStatus(purpose === 'hint' ? '分析中' : 'AI 思考中', true);
+    worker.postMessage({ type: 'think', id, moves: board.history.map(G.moveToStr), agent, opts: { timeMs, seed: 1 + board.history.length } });
+    worker.pending = { id, purpose, key: posKey(board), side, agent, t0: performance.now() };
+  }
+
+  function onWorkerMsg(ev) {
+    const msg = ev.data, p = worker.pending;
+    if (!p || msg.id !== p.id) return;
+    if (msg.type === 'progress') {
+      live = { key: p.key, side: p.side, agent: p.agent, data: msg.data };
+      renderSearchPanel(live, true);
+      draw();
+      return;
+    }
+    busy = false; showThinking(false);
+    if (msg.type === 'error') { setStatus('搜索出错', false); console.error(msg.message); return; }
+    const data = msg.data;
+    result = { key: p.key, side: p.side, agent: p.agent, data };
+    live = null;
+    renderSearchPanel(result, false);
+    if (p.key !== posKey(board)) { draw(); return; }
+    if (p.purpose === 'hint') { hint = data.move; setStatus('提示：' + data.move, false); draw(); return; }
+    setStatus('准备就绪', false);
+    const wr = winrateWhite(result);
+    const wait = Math.max(0, 250 - (performance.now() - p.t0));   // 至少展示 250 ms 的思考过程
+    setTimeout(() => { if (p.key === posKey(board)) playMove(G.parseMove(data.move), wr); }, wait);
+  }
+
+  // ---------------------------------------------------------------- 规则与流程
+  function isAI(side) {
+    const m = $('mode').value;
+    if (m === 'aa') return true;
+    if (m === 'hw') return side === G.BLACK;
+    if (m === 'hb') return side === G.WHITE;
+    return false;
+  }
+  function playMove(m, wr = null) {
+    if (board.isOver() || !board.isLegal(m)) return;
+    board.play(m);
+    hint = null; sel = { from: -1, to: -1 };
+    const k = board.history.length;
+    evalHist.length = k;
+    evalHist[k] = wr != null ? wr : (k > 0 ? evalHist[k - 1] ?? 0.5 : 0.5);
+    afterMove();
+  }
+  function afterMove() {
+    legal = board.isOver() ? [] : board.genMoves();
+    draw(); renderRecord(); renderPlayers(); drawCurve(); renderTerritory();
+    $('moveNo').textContent = board.history.length;
+    if (board.isOver()) { onGameOver(); return; }
+    maybeAI();
+  }
+  function maybeAI() {
+    if (board.isOver() || busy || paused) return;
+    if (isAI(board.side)) {
+      const delay = $('mode').value === 'aa' ? 200 : 0;
+      setTimeout(() => { if (!busy && !paused && isAI(board.side) && !board.isOver()) requestSearch('move'); }, delay);
+    }
+  }
+  function onGameOver() {
+    if (gameOverShown) return;
+    gameOverShown = true;
+    const w = board.winner, who = w === G.WHITE ? '白方' : '黑方', loser = w === G.WHITE ? '黑方' : '白方';
+    const ctrl = isAI(w) ? aiName(w === G.WHITE ? $('aiWhite').value : $('aiBlack').value) : '玩家';
+    $('modalTitle').textContent = `${who}获胜`;
+    $('modalText').textContent = `第 ${board.history.length} 手后，${loser}的四个后都已无路可走，${who}（${ctrl}）获胜。`;
+    setTimeout(() => { $('modal').hidden = false; }, 350);
+    setStatus(`${who}获胜`, false);
+  }
+  function newGame() {
+    cancelSearch();
+    board = new G.Board(); evalHist = [0.5]; result = null; hint = null; gameOverShown = false; paused = false; sel = { from: -1, to: -1 };
+    $('btnPause').textContent = '暂 停';
+    $('modal').hidden = true;
+    if ($('opening').value === 'random' && typeof OPENINGS !== 'undefined') {
+      const op = OPENINGS[Math.floor(Math.random() * OPENINGS.length)];
+      for (const s of op) { board.play(G.parseMove(s)); evalHist.push(0.5); }
+    }
+    renderSearchPanel(null); afterMove();
+  }
+  function undo() {
+    cancelSearch();
+    if (!board.history.length) return;
+    const m = $('mode').value;
+    let n = 1;
+    if ((m === 'hw' || m === 'hb') && board.history.length >= 2) n = isAI(board.side) ? 1 : 2;   // 退回到玩家行棋
+    for (let i = 0; i < n && board.history.length; i++) board.undo();
+    evalHist.length = board.history.length + 1;
+    gameOverShown = false; result = null; hint = null; sel = { from: -1, to: -1 }; $('modal').hidden = true;
+    if (m === 'aa') { paused = true; $('btnPause').textContent = '继 续'; }
+    afterMove();
+  }
+
+  // ---------------------------------------------------------------- 胜率换算（白方视角）
+  function winrateWhite(res) {
+    if (!res) return null;
+    const d = res.data;
+    let w = null;
+    if (d.reason === 'win') w = 1;
+    else if (d.winrate != null) w = d.winrate;
+    else if (d.score != null) {
+      if (d.score > G.Search.WIN_BOUND) w = 1; else if (d.score < -G.Search.WIN_BOUND) w = 0;
+      else w = 1 / (1 + Math.exp(-K * d.score));
+    }
+    if (w == null) return null;
+    return res.side === G.WHITE ? w : 1 - w;
+  }
+
+  // ---------------------------------------------------------------- 绘制棋盘
+  const cv = $('board'), ctx = cv.getContext('2d');
+  let geo = null;
+  function resize() {
+    const wrap = $('boardWrap');
+    const size = Math.floor(wrap.clientWidth);
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = size * dpr; cv.height = size * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const off = size * 0.06, cell = (size - 2 * off) / N;
+    geo = { size, cell, off };
+    draw();
+  }
+  const X = c => geo.off + c * geo.cell;          // 格子左上角
+  const Y = r => geo.off + r * geo.cell;
+  const CX = i => X(i % N) + geo.cell / 2, CY = i => Y((i / N) | 0) + geo.cell / 2;
+
+  function draw() {
+    if (!geo) return;
+    const { size, cell, off } = geo;
+    ctx.fillStyle = '#2b3440'; ctx.fillRect(0, 0, size, size);
+    const key = posKey(board);
+    const terr = $('lyTerr').checked ? G.territoryMap(board) : null;
+    for (let i = 0; i < N * N; i++) {
+      const r = (i / N) | 0, c = i % N;
+      ctx.fillStyle = (r + c) % 2 ? '#e2d3b3' : '#f1e8d4';
+      ctx.fillRect(X(c), Y(r), cell, cell);
+      if (terr && board.cells[i] === G.EMPTY && terr.owner[i] !== null) {
+        const o = terr.owner[i];
+        ctx.fillStyle = o === 1 ? 'rgba(66,133,244,.32)' : o === -1 ? 'rgba(219,68,55,.30)' : 'rgba(120,120,120,.16)';
+        ctx.fillRect(X(c), Y(r), cell, cell);
+      }
+    }
+    // 坐标
+    ctx.fillStyle = '#d7dde5'; ctx.font = `${Math.max(10, cell * 0.28)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let i = 0; i < N; i++) {
+      ctx.fillText('abcdefghij'[i], X(i) + cell / 2, size - off / 2);
+      ctx.fillText('abcdefghij'[i], X(i) + cell / 2, off / 2);
+      ctx.fillText(String(N - i), off / 2, Y(i) + cell / 2);
+      ctx.fillText(String(N - i), size - off / 2, Y(i) + cell / 2);
+    }
+    // 上一手
+    const lm = board.lastMove();
+    if (lm >= 0) {
+      for (const [sq, col] of [[G.mFrom(lm), 'rgba(255,214,0,.35)'], [G.mTo(lm), 'rgba(255,214,0,.55)']]) { ctx.fillStyle = col; ctx.fillRect(X(sq % N), Y((sq / N) | 0), cell, cell); }
+    }
+    // 当前局面的搜索结果；若没有，则显示“上一手 AI 着法”所依据的搜索结果
+    let cur = live && live.key === key ? live : (result && result.key === key ? result : null);
+    let shift = 0;
+    if (!cur && result && board.history.length && result.key === board.history.slice(0, -1).join(',') && result.data.move === G.moveToStr(lm)) { cur = result; shift = 1; }
+    if ($('lySearch').checked && cur && !shift && !board.isOver()) drawSearch(cur);
+    // 箭与后
+    const showNum = $('lyNum').checked;
+    const arrowNo = new Map(); board.history.forEach((m, k) => arrowNo.set(G.mArrow(m), k + 1));
+    for (let i = 0; i < N * N; i++) {
+      const v = board.cells[i];
+      if (v === G.ARROW) drawArrowCell(i, showNum ? arrowNo.get(i) : null, lm >= 0 && G.mArrow(lm) === i);
+      else if (v === G.WHITE || v === G.BLACK) drawQueen(i, v, 1);
+    }
+    if (terr && $('lyDist').checked) drawDist(terr);
+    if ($('lyPV').checked && cur && !board.isOver()) drawPV(cur, shift);
+    if (hint) drawMoveArrow(G.parseMove(hint), '#1f4e79', 3, true);
+    drawSelection();
+  }
+
+  function drawQueen(i, side, alpha) {
+    const x = CX(i), y = CY(i), rad = geo.cell * 0.38;
+    ctx.save(); ctx.globalAlpha = alpha;
+    if (alpha === 1) { ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = rad * 0.35; ctx.shadowOffsetY = rad * 0.1; }
+    const gr = ctx.createRadialGradient(x - rad * 0.35, y - rad * 0.4, rad * 0.1, x, y, rad);
+    if (side === G.BLACK) { gr.addColorStop(0, '#6a6a6a'); gr.addColorStop(1, '#0b0b0b'); } else { gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#cfcfcf'); }
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, rad, 0, 7); ctx.fill();
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.fillStyle = side === G.BLACK ? '#f2d16b' : '#7a5a10';
+    ctx.font = `${geo.cell * 0.46}px "Segoe UI Symbol", "Noto Sans Symbols2", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('♛', x, y + geo.cell * 0.02);
+    ctx.restore();
+  }
+  function drawArrowCell(i, num, last) {
+    const x = X(i % N), y = Y((i / N) | 0), c = geo.cell, p = c * 0.12;
+    ctx.fillStyle = last ? '#8e3b2c' : '#5d4a36'; ctx.fillRect(x + p, y + p, c - 2 * p, c - 2 * p);
+    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2;
+    if (num != null) {
+      ctx.fillStyle = '#fff'; ctx.font = `600 ${c * 0.3}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(num), x + c / 2, y + c / 2 + 1);
+    } else {
+      const q = c * 0.3;
+      ctx.beginPath(); ctx.moveTo(x + q, y + q); ctx.lineTo(x + c - q, y + c - q); ctx.moveTo(x + c - q, y + q); ctx.lineTo(x + q, y + c - q); ctx.stroke();
+    }
+  }
+  // 用带箭头的线段画一个走法：后 from → to，再从 to 射箭到 arrow（虚线）
+  function drawMoveArrow(m, color, width, dashedArrow, label) {
+    const f = G.mFrom(m), t = G.mTo(m), a = G.mArrow(m);
+    const line = (p, q, dash) => {
+      const x1 = CX(p), y1 = CY(p), x2 = CX(q), y2 = CY(q);
+      ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round';
+      if (dash) ctx.setLineDash([width * 2, width * 1.6]);
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]);
+      const ang = Math.atan2(y2 - y1, x2 - x1), h = width * 3.2;
+      ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - h * Math.cos(ang - 0.45), y2 - h * Math.sin(ang - 0.45)); ctx.lineTo(x2 - h * Math.cos(ang + 0.45), y2 - h * Math.sin(ang + 0.45)); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    };
+    line(f, t, false);
+    line(t, a, dashedArrow);
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width; const s = geo.cell * 0.22;
+    ctx.beginPath(); ctx.moveTo(CX(a) - s, CY(a) - s); ctx.lineTo(CX(a) + s, CY(a) + s); ctx.moveTo(CX(a) + s, CY(a) - s); ctx.lineTo(CX(a) - s, CY(a) + s); ctx.stroke();
+    ctx.restore();
+    if (label != null) {
+      ctx.save(); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(CX(t) + geo.cell * 0.3, CY(t) - geo.cell * 0.3, geo.cell * 0.17, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = `700 ${geo.cell * 0.2}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(label), CX(t) + geo.cell * 0.3, CY(t) - geo.cell * 0.3 + 1); ctx.restore();
+    }
+  }
+  function drawSearch(cur) {
+    const d = cur.data;
+    const list = (d.rootMoves || []).slice(0, 5);
+    if (!list.length && d.kind === 'ab' && d.iteration) { drawMoveArrow(G.parseMove(d.iteration.move), 'rgba(192,57,43,.85)', 3, true); return; }
+    if (!list.length && d.kind === 'mcts' && d.best) { drawMoveArrow(G.parseMove(d.best), 'rgba(192,57,43,.85)', 3, true); return; }
+    for (let k = list.length - 1; k >= 0; k--) {
+      const m = G.parseMove(list[k].move);
+      drawMoveArrow(m, k === 0 ? 'rgba(192,57,43,.9)' : `rgba(31,78,121,${0.75 - k * 0.12})`, k === 0 ? 3.2 : 2, true, k + 1);
+    }
+  }
+  function drawPV(cur, shift = 0) {
+    const d = cur.data;
+    const pv = (d.pv || (d.iteration && d.iteration.pv) || []).slice(shift + (d.rootMoves && d.rootMoves.length && !shift ? 1 : 0), shift + 4);
+    if (!pv.length) return;
+    // 在一个副本上依次走主变例，用半透明画出后续各手（编号从 2 开始，因为第 1 手已由“搜索结果”层画出）
+    const b = board.clone(); let start = shift + (d.rootMoves && d.rootMoves.length && !shift ? 1 : 0);
+    if (shift === 0 && start === 1) { const first = (d.pv || [])[0]; if (!first) return; const m0 = G.parseMove(first); if (!b.isLegal(m0)) return; b.play(m0); }
+    pv.forEach((s, k) => {
+      const m = G.parseMove(s); if (!b.isLegal(m)) return;
+      drawMoveArrow(m, b.side === G.WHITE ? 'rgba(255,255,255,.85)' : 'rgba(20,20,20,.75)', 2, true, k + 1 + start);
+      b.play(m);
+    });
+  }
+  function drawDist(terr) {
+    ctx.font = `600 ${geo.cell * 0.2}px sans-serif`; ctx.textBaseline = 'middle';
+    for (let i = 0; i < N * N; i++) {
+      if (board.cells[i] !== G.EMPTY) continue;
+      const a = terr.dW[i], c = terr.dB[i];
+      ctx.textAlign = 'left'; ctx.fillStyle = '#1a4fa0'; ctx.fillText(a >= G.INF ? '∞' : String(a), X(i % N) + geo.cell * 0.08, Y((i / N) | 0) + geo.cell * 0.2);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#a3261b'; ctx.fillText(c >= G.INF ? '∞' : String(c), X(i % N) + geo.cell * 0.92, Y((i / N) | 0) + geo.cell * 0.8);
+    }
+  }
+  function drawSelection() {
+    if (sel.from < 0) return;
+    const c = geo.cell;
+    ctx.strokeStyle = '#ffb300'; ctx.lineWidth = 3; ctx.strokeRect(X(sel.from % N) + 2, Y((sel.from / N) | 0) + 2, c - 4, c - 4);
+    const dots = new Set();
+    for (const m of legal) {
+      if (G.mFrom(m) !== sel.from) continue;
+      if (sel.to < 0) dots.add(G.mTo(m)); else if (G.mTo(m) === sel.to) dots.add(G.mArrow(m));
+    }
+    if (sel.to >= 0) {
+      ctx.fillStyle = (Math.floor(sel.from / N) + sel.from % N) % 2 ? '#e2d3b3' : '#f1e8d4';
+      ctx.fillRect(X(sel.from % N), Y((sel.from / N) | 0), c, c);
+      drawQueen(sel.to, board.side, 0.85);
+      ctx.strokeStyle = '#ffb300'; ctx.strokeRect(X(sel.to % N) + 2, Y((sel.to / N) | 0) + 2, c - 4, c - 4);
+    }
+    for (const d of dots) {
+      ctx.fillStyle = sel.to < 0 ? 'rgba(46,125,50,.75)' : 'rgba(192,57,43,.8)';
+      ctx.beginPath(); ctx.arc(CX(d), CY(d), c * 0.13, 0, 7); ctx.fill();
+    }
+  }
+
+  // ---------------------------------------------------------------- 面板
+  function aiName(id) { const a = AI_LIST.find(x => x.id === id); return a ? a.short : id; }
+  function fmtScore(v, short) {
+    if (v == null) return '—';
+    if (v > G.Search.WIN_BOUND) return short ? '胜' : '必胜';
+    if (v < -G.Search.WIN_BOUND) return short ? '负' : '必败';
+    return (v > 0 ? '+' : '') + v.toFixed(short ? 1 : 2);
+  }
+  function fmtNum(n) { if (n == null) return '—'; if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k'; return String(n); }
+  const REASONS = {
+    search: '迭代加深 α-β 搜索：按搜索值选择着法。箭头为根结点得分最高的 5 个候选（虚线为射箭方向）。',
+    mcts: '蒙特卡洛树搜索：选择访问次数最多的子结点。箭头为访问次数最多的 5 个候选。',
+    win: '一步制胜：走完后对方四个后都无路可走。', random: '随机走子。', greedy: '一步贪心：选择走完后静态评估最高的走法。',
+    filler: '双方已完全分隔：进入填格阶段，使用共用的填格策略（尽量保留己方可走的格子）。', fallback: '时间太短，按启发式排序走第一步。',
+  };
+
+  function renderSearchPanel(cur, isLive) {
+    const thead = $('searchTable').querySelector('thead'), tbody = $('searchTable').querySelector('tbody');
+    if (!cur) {
+      ['kAlgo', 'kDepth', 'kNodes', 'kNps', 'kTime', 'kEval'].forEach(k => $(k).textContent = '—');
+      $('kReason').textContent = '尚未开始搜索。'; $('kReason').className = 'reason'; $('kPV').textContent = '—';
+      thead.innerHTML = ''; tbody.innerHTML = ''; return;
+    }
+    const d = cur.data;
+    $('kAlgo').textContent = aiName(cur.agent);
+    if (d.kind === 'ab' && d.iteration) {
+      const it = d.iteration;
+      $('kDepth').textContent = `${it.depth} 层`; $('kNodes').textContent = fmtNum(it.nodes);
+      $('kNps').textContent = fmtNum(Math.round(it.nodes / Math.max(1, it.ms) * 1000)) + '/s';
+      $('kTime').textContent = it.ms + ' ms'; $('kEval').textContent = fmtScore(it.score);
+      $('kPV').textContent = (it.pv || []).join('  ');
+      $('kReason').textContent = `迭代加深进行中：第 ${it.depth} 层完成，当前最佳 ${it.move}。`; $('kReason').className = 'reason';
+      appendIterRow(it);
+      return;
+    }
+    if (d.kind === 'mcts' || d.simulations != null) {
+      $('kDepth').textContent = `${fmtNum(d.simulations)} 次`;
+      $('kNodes').textContent = `树深 ${d.selDepth ?? d.maxDepth ?? '—'}`;
+      const ms = d.timeMs ?? d.ms;
+      $('kNps').textContent = ms ? fmtNum(Math.round(d.simulations / ms * 1000)) + ' 次/s' : '—';
+      $('kTime').textContent = (ms ?? 0) + ' ms';
+      $('kEval').textContent = d.winrate != null ? (d.winrate * 100).toFixed(1) + '%' : '—';
+      $('kPV').textContent = (d.pv || []).join('  ') || (d.best || '—');
+      $('kReason').textContent = isLive ? `模拟进行中：已完成 ${d.simulations} 次模拟，当前最佳 ${d.best}。` : (REASONS[d.reason] || d.reason);
+      $('kReason').className = 'reason' + (d.reason === 'win' ? ' win' : '');
+      if (!isLive) {
+        thead.innerHTML = '<tr><th>#</th><th>着法</th><th>访问 N</th><th>胜率 Q</th><th>先验 P</th><th></th></tr>';
+        const rm = d.rootMoves || [], maxN = Math.max(1, ...rm.map(c => c.visits));
+        tbody.innerHTML = rm.map((c, k) => `<tr><td>${k + 1}</td><td>${c.move}</td><td>${c.visits}</td><td>${(c.winrate * 100).toFixed(1)}%</td><td>${c.prior != null ? (c.prior * 100).toFixed(1) + '%' : '—'}</td><td><span class="bar" style="width:${Math.round(50 * c.visits / maxN)}px"></span></td></tr>`).join('');
+      }
+      return;
+    }
+    $('kDepth').textContent = d.depth != null ? `${d.depth} 层` : '1 层';
+    $('kNodes').textContent = fmtNum(d.nodes);
+    $('kNps').textContent = d.nodes && d.timeMs ? fmtNum(Math.round(d.nodes / Math.max(1, d.timeMs) * 1000)) + '/s' : '—';
+    $('kTime').textContent = (d.timeMs ?? 0) + ' ms';
+    $('kEval').textContent = fmtScore(d.score);
+    $('kPV').textContent = (d.pv || []).join('  ') || '—';
+    let reason = REASONS[d.reason] || d.reason;
+    if (d.partialUsed) reason += ' 最后一层未搜完，采用了该层已搜完部分中的最佳着法。';
+    $('kReason').textContent = reason;
+    $('kReason').className = 'reason' + (d.score > G.Search.WIN_BOUND ? ' win' : '');
+    if (d.rootMoves && d.rootMoves.length) {
+      const its = (d.iterations || []).map(it => `${it.depth}层:${it.move}(${fmtScore(it.score, true)})`).join(' → ');
+      thead.innerHTML = '<tr><th>#</th><th>候选着法</th><th>搜索值</th><th></th></tr>';
+      const mx = Math.max(...d.rootMoves.map(r => r.score)), mn = Math.min(...d.rootMoves.map(r => r.score));
+      tbody.innerHTML = d.rootMoves.map((r, k) => `<tr><td>${k + 1}</td><td>${r.move}</td><td>${fmtScore(r.score, true)}</td><td><span class="bar" style="width:${Math.round(6 + 44 * (mx > mn ? (r.score - mn) / (mx - mn) : 1))}px"></span></td></tr>`).join('') +
+        (its ? `<tr><td colspan="4" class="iters">迭代过程：${its}</td></tr>` : '');
+    } else { thead.innerHTML = ''; tbody.innerHTML = ''; }
+  }
+  function appendIterRow(it) {
+    const thead = $('searchTable').querySelector('thead'), tbody = $('searchTable').querySelector('tbody');
+    if (it.depth === 1 || !thead.innerHTML.includes('深度')) { thead.innerHTML = '<tr><th>深度</th><th>最佳</th><th>评估</th><th>结点</th><th>用时</th></tr>'; tbody.innerHTML = ''; }
+    tbody.insertAdjacentHTML('beforeend', `<tr><td>${it.depth}</td><td>${it.move}</td><td>${fmtScore(it.score, true)}</td><td>${fmtNum(it.nodes)}</td><td>${it.ms} ms</td></tr>`);
+  }
+
+  function renderPlayers() {
+    const m = $('mode').value;
+    const [wn, bn] = MODE_DESC[m];
+    $('nameWhite').textContent = wn === 'AI' ? aiName($('aiWhite').value) : '玩家';
+    $('nameBlack').textContent = bn === 'AI' ? aiName($('aiBlack').value) : '玩家';
+    $('plWhite').classList.toggle('turn', !board.isOver() && board.side === G.WHITE);
+    $('plBlack').classList.toggle('turn', !board.isOver() && board.side === G.BLACK);
+    $('aiWhite').disabled = !isAI(G.WHITE) && m !== 'hh';
+    $('aiBlack').disabled = !isAI(G.BLACK) && m !== 'hh';
+    $('btnPause').disabled = m !== 'aa';
+  }
+  function renderRecord() {
+    const ol = $('record');
+    ol.innerHTML = board.history.map((m, i) => `<li class="${i % 2 ? 'b' : 'w'}${i === board.history.length - 1 ? ' cur' : ''}">${G.moveToStr(m)}</li>`).join('');
+    ol.scrollTop = ol.scrollHeight;
+  }
+  function renderTerritory() {
+    const t = G.territoryMap(board), f = G.Eval.texelFeatures(board);
+    let w = 0, b = 0, eq = 0, none = 0;
+    for (let i = 0; i < N * N; i++) { const o = t.owner[i]; if (board.cells[i] !== G.EMPTY) continue; if (o === 1) w++; else if (o === -1) b++; else if (o === 0) eq++; else none++; }
+    const mob = s => board.queens[s].map(q => G.Eval.queenMobility(board.cells, q));
+    const mw = mob(G.WHITE), mb = mob(G.BLACK);
+    const sep = G.Eval.separated(board);
+    $('terrStats').innerHTML = `
+      <div class="kpis">
+        <div><small>白方领地（后距离更近）</small><b style="color:#2a62c9">${w} 格</b></div>
+        <div><small>黑方领地</small><b style="color:#b8372a">${b} 格</b></div>
+        <div><small>均势 / 无人可达</small><b>${eq} / ${none}</b></div>
+        <div><small>剩余空格</small><b>${100 - 8 - board.history.length}</b></div>
+        <div><small>阶段系数 p</small><b>${f.p.toFixed(2)}</b></div>
+        <div><small>局面状态</small><b>${board.isOver() ? '已结束' : sep ? '已分隔' : '争夺中'}</b></div>
+      </div>
+      <table class="mob"><thead><tr><th>后</th><th>位置</th><th>一步可达格数</th></tr></thead><tbody>
+      ${board.queens[G.WHITE].map((q, k) => `<tr><td>白 ${k + 1}</td><td>${G.sqToStr(q)}</td><td>${mw[k]}${mw[k] === 0 ? '（被困）' : ''}</td></tr>`).join('')}
+      ${board.queens[G.BLACK].map((q, k) => `<tr><td>黑 ${k + 1}</td><td>${G.sqToStr(q)}</td><td>${mb[k]}${mb[k] === 0 ? '（被困）' : ''}</td></tr>`).join('')}
+      </tbody></table>`;
+  }
+
+  // ---------------------------------------------------------------- 胜率曲线
+  function drawCurve() {
+    const c = $('curve'), x = c.getContext('2d');
+    const w = c.clientWidth || 360, h = 190, dpr = window.devicePixelRatio || 1;
+    c.width = w * dpr; c.height = h * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.clearRect(0, 0, w, h);
+    const L = 36, R = 10, T = 10, B = 24;
+    const n = Math.max(10, board.history.length);
+    const px = k => L + (w - L - R) * k / n, py = v => T + (h - T - B) * (1 - v);
+    x.strokeStyle = '#e5e0d5'; x.fillStyle = '#6b7280'; x.font = '11px sans-serif'; x.textAlign = 'right'; x.textBaseline = 'middle';
+    for (const v of [0, 0.25, 0.5, 0.75, 1]) { x.beginPath(); x.moveTo(L, py(v)); x.lineTo(w - R, py(v)); x.stroke(); x.fillText(Math.round(v * 100) + '%', L - 4, py(v)); }
+    x.textAlign = 'center'; x.textBaseline = 'top';
+    for (let k = 0; k <= n; k += Math.ceil(n / 8)) x.fillText(String(k), px(k), h - B + 6);
+    x.strokeStyle = '#1f4e79'; x.lineWidth = 2; x.beginPath();
+    let started = false;
+    for (let k = 0; k <= board.history.length; k++) {
+      const v = evalHist[k]; if (v == null) continue;
+      if (!started) { x.moveTo(px(k), py(v)); started = true; } else x.lineTo(px(k), py(v));
+    }
+    x.stroke();
+    x.fillStyle = 'rgba(66,133,244,.07)'; x.fillRect(L, T, w - L - R, (h - T - B) / 2);
+  }
+
+  // ---------------------------------------------------------------- 交互
+  function setStatus(text, isBusy) { $('statusText').textContent = text; $('status').classList.toggle('busy', !!isBusy); }
+  function showThinking(on, text) { $('thinking').hidden = !on; if (text) $('thinkingText').textContent = text; }
+
+  function clickCell(i) {
+    if (board.isOver() || isAI(board.side)) return;
+    if (busy && worker.pending && worker.pending.purpose !== 'hint') return;
+    const v = board.cells[i];
+    if (sel.from < 0 || (sel.to < 0 && v === board.side)) {
+      if (v === board.side && legal.some(m => G.mFrom(m) === i)) { sel = { from: i, to: -1 }; setStatus('选择目的地', false); }
+      draw(); return;
+    }
+    if (sel.to < 0) {
+      if (legal.some(m => G.mFrom(m) === sel.from && G.mTo(m) === i)) { sel.to = i; setStatus('选择射箭位置', false); }
+      else sel = { from: -1, to: -1 };
+      draw(); return;
+    }
+    const m = G.mk(sel.from, sel.to, i);
+    if (board.isLegal(m)) { cancelSearch(); setStatus('准备就绪', false); playMove(m); }
+    else { sel = { from: -1, to: -1 }; draw(); }
+  }
+  cv.addEventListener('click', ev => {
+    if (!geo) return;
+    const rect = cv.getBoundingClientRect();
+    const c = Math.floor((ev.clientX - rect.left - geo.off) / geo.cell), r = Math.floor((ev.clientY - rect.top - geo.off) / geo.cell);
+    if (r < 0 || r >= N || c < 0 || c >= N) { sel = { from: -1, to: -1 }; draw(); return; }
+    clickCell(r * N + c);
+  });
+  cv.addEventListener('contextmenu', ev => { ev.preventDefault(); sel = { from: -1, to: -1 }; draw(); });
+
+  function fillAISelect(s, def) { s.innerHTML = AI_LIST.map(a => `<option value="${a.id}">${a.name}</option>`).join(''); s.value = def; }
+  fillAISelect($('aiWhite'), AI_LIST[0].id);
+  fillAISelect($('aiBlack'), AI_LIST[1] ? AI_LIST[1].id : AI_LIST[0].id);
+  const syncThink = () => { const v = THINK_STEPS[+$('think').value]; $('thinkOut').textContent = (v / 1000).toFixed(v < 1000 ? 2 : 1) + ' 秒'; };
+  $('think').addEventListener('input', syncThink); syncThink();
+  $('mode').addEventListener('change', () => { cancelSearch(); paused = false; $('btnPause').textContent = '暂 停'; sel = { from: -1, to: -1 }; renderPlayers(); draw(); maybeAI(); });
+  ['aiWhite', 'aiBlack'].forEach(id => $(id).addEventListener('change', renderPlayers));
+  ['lyTerr', 'lySearch', 'lyPV', 'lyDist', 'lyNum'].forEach(id => $(id).addEventListener('change', draw));
+  $('btnNew').addEventListener('click', newGame);
+  $('modalNew').addEventListener('click', newGame);
+  $('modalClose').addEventListener('click', () => { $('modal').hidden = true; });
+  $('btnUndo').addEventListener('click', undo);
+  $('btnHint').addEventListener('click', () => { if (!board.isOver() && !busy) requestSearch('hint'); });
+  $('btnPause').addEventListener('click', () => {
+    paused = !paused; $('btnPause').textContent = paused ? '继 续' : '暂 停';
+    if (paused) cancelSearch(); else maybeAI();
+  });
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+    document.querySelectorAll('.tabpane').forEach(p => p.classList.toggle('active', p.id === t.dataset.tab));
+    if (t.dataset.tab === 'tCurve') drawCurve();
+  }));
+  $('btnExport').addEventListener('click', () => {
+    const rec = { format: 'amazons-ai-lab/1', board: '10x10', date: new Date().toISOString(),
+      white: $('nameWhite').textContent, black: $('nameBlack').textContent,
+      result: board.isOver() ? (board.winner === G.WHITE ? 'white' : 'black') : 'unfinished',
+      moves: board.history.map(G.moveToStr) };
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(rec, null, 2)], { type: 'application/json' }));
+    a.download = `amazons_${Date.now()}.json`; a.click();
+  });
+  $('btnImport').addEventListener('click', () => {
+    const box = $('importBox');
+    if (box.hidden) { box.hidden = false; box.focus(); return; }
+    const txt = box.value.trim();
+    if (!txt) { box.hidden = true; return; }
+    let moves;
+    try { moves = JSON.parse(txt).moves; } catch (e) { moves = txt.split(/[\s,，]+/).filter(Boolean); }
+    try {
+      cancelSearch();
+      const b = G.Board.fromMoves(moves);
+      board = b; evalHist = new Array(b.history.length + 1).fill(null); evalHist[0] = 0.5;
+      result = null; gameOverShown = false; box.hidden = true; box.value = ''; sel = { from: -1, to: -1 };
+      $('mode').value = 'hh'; paused = false; afterMove();
+      setStatus(`已导入 ${moves.length} 手`, false);
+    } catch (e) { setStatus('棋谱格式有误：' + e.message, false); }
+  });
+  $('btnCopy').addEventListener('click', () => {
+    const s = board.history.map(G.moveToStr).join(' ');
+    if (navigator.clipboard) navigator.clipboard.writeText(s).then(() => setStatus('已复制棋谱', false), () => setStatus('复制失败', false));
+  });
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+    if (e.key === 'Escape') { sel = { from: -1, to: -1 }; draw(); }
+  });
+  window.addEventListener('resize', () => { resize(); drawCurve(); });
+
+  // 供自动化测试使用的只读接口
+  window.__amazons = { get board() { return board; }, get busy() { return busy; }, get result() { return result; }, get sel() { return sel; }, G, playMove: s => playMove(G.parseMove(s)), clickCell, newGame };
+
+  makeWorker();
+  resize();
+  newGame();
+})();
+</script>
+</body>
+</html>

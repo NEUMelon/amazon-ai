@@ -1,0 +1,16 @@
+E1 done
+E2 full 3119 ms
+E2 noTT 3141 ms
+E2 noKiller 3327 ms
+E2 noPVS 3253 ms
+E2 plain 3123 ms
+E2 cheapOrder 1770 ms
+E2 sepLeaf 6938 ms
+E3 ab
+E3 ab-cheapOrder
+E3 mcts-pure
+E3 mcts-uct
+E3 mcts-cutoff
+E3 mcts-sep
+E3 mcts-puct
+E3 mcts-learned

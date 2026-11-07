@@ -1,0 +1,8 @@
+digraph G { rankdir=LR; dpi=220; nodesep=0.2; ranksep=0.9;
+ node [fontname="Noto Sans CJK SC", fontsize=10, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#4B5563"]; edge [fontname="Noto Sans CJK SC", fontsize=9, color="#4B5563", arrowsize=0.7];
+ subgraph cluster_m { label="主线程（app.js）"; fontname="Noto Sans CJK SC"; color="#1F4E79"; style=rounded;
+  m1 [label="轮到 AI：requestSearch()"]; m2 [label="收到 progress：\n更新搜索面板与棋盘图层"]; m3 [label="收到 result：走子、\n更新领地与胜率曲线、检查胜负"]; m4 [label="悔棋/新局：\nterminate() 并重建 Worker", fillcolor="#FDECEA"]; }
+ subgraph cluster_w { label="Web Worker（worker.js + 引擎）"; fontname="Noto Sans CJK SC"; color="#C2571A"; style=rounded;
+  w1 [label="按着法序列重建棋盘\nmakeAgent(name, opts)"]; w2 [label="搜索中：每层迭代 /\n每 150 ms 模拟统计回调"]; w3 [label="搜索结束\n整理诊断信息"]; }
+ m1 -> w1 [label="{type:'think', moves, agent, opts}"]; w1 -> w2; w2 -> m2 [label="{type:'progress'}"]; w2 -> w3; w3 -> m3 [label="{type:'result', data}"]; m4 -> w1 [label="中断", style=dashed];
+}

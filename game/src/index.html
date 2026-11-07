@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>亚马逊棋 AI 实验台</title>
+<style>/*STYLE*/</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">♛</div>
+    <div>
+      <h1>亚马逊棋 AI 实验台</h1>
+      <p>α-β 搜索 · 蒙特卡洛树搜索 · 领地评估 · 自对弈学习</p>
+    </div>
+  </div>
+  <div class="status" id="status"><span class="dot"></span><span id="statusText">准备就绪</span></div>
+</header>
+
+<main class="layout">
+  <section class="board-col">
+    <div class="board-wrap" id="boardWrap">
+      <canvas id="board" aria-label="10×10 亚马逊棋棋盘"></canvas>
+      <div class="thinking" id="thinking" hidden><div class="spinner"></div><span id="thinkingText">AI 思考中…</span></div>
+    </div>
+    <div class="board-bar">
+      <div class="players">
+        <div class="pl" id="plWhite"><i class="stone w"></i><div><b id="nameWhite">玩家</b><small>白方先行</small></div></div>
+        <div class="vs">VS</div>
+        <div class="pl" id="plBlack"><i class="stone b"></i><div><b id="nameBlack">AI</b><small>黑方</small></div></div>
+      </div>
+      <div class="movecount">第 <b id="moveNo">0</b> 手</div>
+    </div>
+    <div class="layers">
+      <span class="lbl">棋盘图层</span>
+      <label><input type="checkbox" id="lyTerr" checked> 领地（后距离）</label>
+      <label><input type="checkbox" id="lySearch" checked> 搜索候选</label>
+      <label><input type="checkbox" id="lyPV" checked> 主变例</label>
+      <label><input type="checkbox" id="lyDist"> 距离数字</label>
+      <label><input type="checkbox" id="lyNum"> 箭的手数</label>
+    </div>
+    <p class="howto">走法：① 点击己方的后 → ② 点击绿色圆点（目的地）→ ③ 点击红色圆点（射箭位置）。右键或 Esc 取消。蓝色/红色底纹分别表示白方/黑方的“领地”（该方的后能更快到达的空格）。</p>
+  </section>
+
+  <aside class="panel">
+    <div class="card">
+      <h2>对局设置</h2>
+      <div class="row">
+        <label for="mode">模式</label>
+        <select id="mode">
+          <option value="hw">人机对弈（我执白先行）</option>
+          <option value="hb">人机对弈（我执黑）</option>
+          <option value="aa">AI 对 AI 演示</option>
+          <option value="hh">双人对弈 / 分析</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="aiWhite">白方 AI</label>
+        <select id="aiWhite" class="aisel"></select>
+      </div>
+      <div class="row">
+        <label for="aiBlack">黑方 AI</label>
+        <select id="aiBlack" class="aisel"></select>
+      </div>
+      <div class="row">
+        <label for="think">思考时间</label>
+        <input type="range" id="think" min="0" max="6" step="1" value="3">
+        <output id="thinkOut">1.0 秒</output>
+      </div>
+      <div class="row">
+        <label for="opening">开局</label>
+        <select id="opening">
+          <option value="empty">标准初始局面</option>
+          <option value="random">随机均衡开局（双方各走一步）</option>
+        </select>
+      </div>
+      <div class="btns">
+        <button id="btnNew" class="primary">新 局</button>
+        <button id="btnUndo">悔 棋</button>
+        <button id="btnHint">提 示</button>
+        <button id="btnPause">暂 停</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="tSearch" role="tab">搜索过程</button>
+        <button class="tab" data-tab="tTerr" role="tab">领地</button>
+        <button class="tab" data-tab="tCurve" role="tab">局势曲线</button>
+        <button class="tab" data-tab="tRecord" role="tab">棋谱</button>
+        <button class="tab" data-tab="tAbout" role="tab">算法说明</button>
+      </div>
+      <div class="tabpane active" id="tSearch">
+        <div class="kpis">
+          <div><small>算法</small><b id="kAlgo">—</b></div>
+          <div><small>深度 / 模拟次数</small><b id="kDepth">—</b></div>
+          <div><small>结点数</small><b id="kNodes">—</b></div>
+          <div><small>速度</small><b id="kNps">—</b></div>
+          <div><small>用时</small><b id="kTime">—</b></div>
+          <div><small>局势（AI 视角）</small><b id="kEval">—</b></div>
+        </div>
+        <div class="reason" id="kReason">尚未开始搜索。</div>
+        <div class="pv"><small>主变例</small><div id="kPV">—</div></div>
+        <div class="tablewrap"><table id="searchTable"><thead></thead><tbody></tbody></table></div>
+      </div>
+      <div class="tabpane" id="tTerr">
+        <div id="terrStats"></div>
+        <p class="note">领地按后距离划分：某空格离哪一方的后更近（后的走法步数更少），就记为哪一方的领地。这正是评估函数中 t1 项的含义。双方没有任何共同可达的空格、且敌对的后也不相邻时称为“已分隔”，此后比的是各自区域的大小。</p>
+      </div>
+      <div class="tabpane" id="tCurve">
+        <canvas id="curve" height="190"></canvas>
+        <p class="note">纵轴为 AI 估计的白方胜率。α-β 的评估值 v（单位：格）按 σ(k·v) 换算（k 由 Texel 拟合得到），MCTS 直接取根结点最佳子结点的平均回报；人类着法沿用上一个估计。</p>
+      </div>
+      <div class="tabpane" id="tRecord">
+        <ol id="record" class="record"></ol>
+        <div class="btns small">
+          <button id="btnExport">导出棋谱</button>
+          <button id="btnImport">导入棋谱</button>
+          <button id="btnCopy">复制坐标</button>
+        </div>
+        <textarea id="importBox" placeholder="粘贴着法序列，例如：d1-d7/g7 a7-c5/c2 …" hidden></textarea>
+      </div>
+      <div class="tabpane about" id="tAbout">
+        <h3>规则</h3>
+        <p>10×10 棋盘，双方各有四个“后”。每一步先像国际象棋的后一样沿直线或斜线移动一个己方的后（不能越过任何障碍），再从落点像后一样射出一支箭，箭落下的格子永久封死。轮到某方时若无路可走，该方判负。白方先行。</p>
+        <h3>领地评估</h3>
+        <p>计算双方的“后距离”和“王距离”，统计谁能更快到达每个空格（t1、t2），再加上位置项（c1、c2）和机动性。各项权重随“剩余争夺量” w 线性变化（Lieberum 2005 的框架），可以用 Texel 方法从对局结果中拟合。</p>
+        <h3>α-β 搜索</h3>
+        <p>迭代加深的负极大值 α-β，配合置换表、杀手着法、历史启发与主变例搜索。合法走法太多（开局 2176 个），因此每个结点只搜索排序最靠前的少数走法；排序采用“可分离评估”：分别评估“只移动后”和“只放箭”，两者相加作为整步的近似分数。</p>
+        <h3>蒙特卡洛树搜索</h3>
+        <p>选择—扩展—模拟—回传。纯随机版本把棋随机下到终局；增强版本只随机走几步，再用评估函数估计胜率（评估截断），并按启发式顺序渐进地展开子结点；PUCT 版本还用启发式或学习得到的走法概率作为先验。</p>
+        <h3>填格阶段</h3>
+        <p>双方被箭完全隔开后，胜负取决于各自区域的大小。此时所有 AI 都使用同一个填格策略：每步选择使己方仍可到达的空格数最多的走法。</p>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-card">
+    <h3 id="modalTitle">对局结束</h3>
+    <p id="modalText"></p>
+    <div class="btns"><button id="modalNew" class="primary">再来一局</button><button id="modalClose">查看棋局</button></div>
+  </div>
+</div>
+
+<script>/*ENGINE*/</script>
+<script>/*MODELS*/</script>
+<script id="workerSrc" type="text/plain">/*WORKER*/</script>
+<script>/*APP*/</script>
+</body>
+</html>

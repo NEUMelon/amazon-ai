@@ -1,0 +1,16 @@
+digraph G { rankdir=LR; dpi=220; nodesep=0.25; ranksep=0.5; compound=true;
+ node [fontname="Noto Sans CJK SC", fontsize=10, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#4B5563"]; edge [fontname="Noto Sans CJK SC", fontsize=8.5, color="#4B5563", arrowsize=0.7];
+ subgraph cluster_e { label="engine/（JavaScript，无平台依赖）"; fontname="Noto Sans CJK SC"; fontsize=11; color="#1F4E79"; style=rounded;
+  core [label="core.js\n棋盘·走法·距离"]; ev [label="eval.js\n领地评估·分隔"]; mg [label="movegen.js\n着法排序"]; sea [label="search.js\nα-β"]; mc [label="mcts.js\nMCTS"]; pol [label="policy.js\n线性策略"]; ag [label="agents.js\n智能体·填格·预设", fillcolor="#E8EEF6"];
+  core -> ev -> mg; mg -> sea; mg -> mc; mg -> pol; pol -> mc; ev -> ag; sea -> ag; mc -> ag; }
+ subgraph cluster_g { label="game/（网页）"; fontname="Noto Sans CJK SC"; fontsize=11; color="#C2571A"; style=rounded;
+  bld [label="build.js\n单文件打包"]; wk [label="worker.js\nWeb Worker"]; app [label="app.js·index.html·style.css\n界面与可视化"]; html [label="dist/amazons.html", shape=note, fillcolor="#FBEFE7"]; bld -> html; wk -> html; app -> html; }
+ subgraph cluster_x { label="experiments/ 与 analysis/"; fontname="Noto Sans CJK SC"; fontsize=11; color="#2E7D32"; style=rounded;
+  arena [label="arena.js·runner.js\n对局与并行执行"]; tac [label="efficiency.js·quality.js\nvariance.js 专项评测"]; ana [label="analyze.py·figscripts\n统计与绘图"]; arena -> ana; tac -> ana; }
+ subgraph cluster_l { label="learning/（Python）"; fontname="Noto Sans CJK SC"; fontsize=11; color="#6A4C93"; style=rounded;
+  ext [label="extract.js\n特征抽取"]; tp [label="train_policy.py"]; tx [label="texel.py"]; ext -> tp; ext -> tx; }
+ models [label="models/*.json\n策略参数·评估权重", shape=cylinder, fillcolor="#F3F4F6"];
+ data [label="data/raw/*.jsonl\n对局记录", shape=cylinder, fillcolor="#F3F4F6"];
+ rep [label="report/\nMarkdown→Word→PDF", shape=note, fillcolor="#F3F4F6"];
+ ag -> bld [label="源码原样内联"]; ag -> arena [label="require"]; ag -> tac; arena -> data; data -> ext; tp -> models; tx -> models; models -> bld; models -> arena; ana -> rep; tests [label="tests/\n单元测试·界面测试"]; tests -> ag [style=dashed]; tests -> html [style=dashed];
+}

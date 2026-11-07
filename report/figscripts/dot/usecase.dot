@@ -1,0 +1,16 @@
+digraph G {
+  rankdir=LR; bgcolor="white"; dpi=220;
+  node [fontname="Noto Sans CJK SC", fontsize=11, color="#1F4E79", fontcolor="#1F2A37"];
+  edge [color="#6B7280", arrowsize=0.7, fontname="Noto Sans CJK SC", fontsize=9];
+  user [label="玩家", shape=box, style="rounded,filled", fillcolor="#EEF1F5", width=1.0];
+  ai [label="AI 引擎\n（Web Worker）", shape=box, style="rounded,filled", fillcolor="#FBEFE7", color="#C2571A", width=1.2];
+  subgraph cluster_sys { label="亚马逊棋网页（amazons.html）"; fontname="Noto Sans CJK SC"; fontsize=12; color="#9CA3AF"; style="rounded";
+    node [shape=ellipse, style="filled", fillcolor="#FFFFFF"];
+    u1 [label="选择对弈模式\n人执白/人执黑/观战/双人"]; u2 [label="选择 AI 算法\n与思考时间"]; u3 [label="走子：选后→目的地→射箭"];
+    u4 [label="悔棋 / 新局 / 暂停"]; u5 [label="请求提示"]; u6 [label="查看决策过程\n领地图·候选·主变例·搜索统计"];
+    u7 [label="查看局势与胜率曲线"]; u8 [label="导出/导入棋谱"]; u9 [label="AI 计算着法"]; u10 [label="胜负判定\n（无子可动者负）"];
+  }
+  user -> {u1 u2 u3 u4 u5 u6 u7 u8};
+  u3 -> u10 [style=dashed, label="包含"]; u5 -> u9 [style=dashed, label="包含"];
+  u9 -> ai [dir=both]; u6 -> u9 [style=dashed, label="扩展"];
+}

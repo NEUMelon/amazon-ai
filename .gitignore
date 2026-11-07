@@ -1,0 +1,6 @@
+node_modules/
+__pycache__/
+data/learn/policy_X.f32
+report/build/
+report/out/
+data/*.done

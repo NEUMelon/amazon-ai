@@ -1,0 +1,263 @@
+{
+ "seed": 20261107,
+ "tried": 40,
+ "note": "白、黑各一手，均取自静态评估前 30 名；轮白方走；1 s α-β |eval|<4",
+ "openings": [
+  {
+   "moves": [
+    "d1-d8/f10",
+    "g10-g5/a5"
+   ],
+   "eval": 2.34,
+   "depth": 4
+  },
+  {
+   "moves": [
+    "d1-d8/f10",
+    "a7-e3/e7"
+   ],
+   "eval": 0.76,
+   "depth": 4
+  },
+  {
+   "moves": [
+    "d1-d8/j8",
+    "g10-g5/i5"
+   ],
+   "eval": 3.05,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "a4-d7/i7",
+    "g10-g2/j5"
+   ],
+   "eval": 2.67,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d7/b7",
+    "a7-d4/d6"
+   ],
+   "eval": -0.98,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d9/f9",
+    "g10-g2/i4"
+   ],
+   "eval": 1.74,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "g1-g7/g9",
+    "d10-d5/a5"
+   ],
+   "eval": 1.56,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "j4-g7/b7",
+    "d10-d5/a5"
+   ],
+   "eval": -0.71,
+   "depth": 4
+  },
+  {
+   "moves": [
+    "d1-d7/b7",
+    "g10-g4/i4"
+   ],
+   "eval": 2.51,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "g1-g8/i8",
+    "d10-d5/i5"
+   ],
+   "eval": 2.71,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d9/a6",
+    "g10-g4/g2"
+   ],
+   "eval": 2.11,
+   "depth": 4
+  },
+  {
+   "moves": [
+    "g1-g8/i6",
+    "d10-d3/a3"
+   ],
+   "eval": 2.66,
+   "depth": 4
+  },
+  {
+   "moves": [
+    "d1-d8/i8",
+    "g10-g5/j5"
+   ],
+   "eval": 3.83,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "g1-g8/e10",
+    "d10-d2/b4"
+   ],
+   "eval": 2.02,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d7/i7",
+    "g10-g5/d8"
+   ],
+   "eval": 1.86,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "g1-g8/e10",
+    "d10-d3/h7"
+   ],
+   "eval": 1.22,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d8/a8",
+    "a7-e3/b3"
+   ],
+   "eval": 1.51,
+   "depth": 4
+  },
+  {
+   "moves": [
+    "d1-d7/f9",
+    "g10-g2/c6"
+   ],
+   "eval": 0.9,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "g1-g7/b7",
+    "d10-d4/b4"
+   ],
+   "eval": 0.03,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "g1-g8/i6",
+    "d10-d5/j5"
+   ],
+   "eval": 2.76,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d7/d9",
+    "a7-e3/e7"
+   ],
+   "eval": 0.74,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d8/b8",
+    "a7-e3/e8"
+   ],
+   "eval": -0.62,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d9/f9",
+    "g10-g4/b4"
+   ],
+   "eval": 0.92,
+   "depth": 4
+  },
+  {
+   "moves": [
+    "a4-d7/i7",
+    "g10-g6/g2"
+   ],
+   "eval": 2.28,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d9/f9",
+    "g10-g3/a3"
+   ],
+   "eval": 1.11,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d9/g9",
+    "a7-e3/a3"
+   ],
+   "eval": 0.65,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "d1-d8/b6",
+    "j7-g4/g2"
+   ],
+   "eval": 2.05,
+   "depth": 4
+  },
+  {
+   "moves": [
+    "g1-g7/g9",
+    "d10-d5/j5"
+   ],
+   "eval": 2.4,
+   "depth": 4
+  },
+  {
+   "moves": [
+    "d1-d7/f9",
+    "g10-g5/g2"
+   ],
+   "eval": 1.64,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "g1-g8/j8",
+    "a7-e3/a3"
+   ],
+   "eval": 2.91,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "g1-g7/e9",
+    "d10-d4/b4"
+   ],
+   "eval": 1.04,
+   "depth": 5
+  },
+  {
+   "moves": [
+    "g1-g8/a8",
+    "a7-d4/d2"
+   ],
+   "eval": -2.15,
+   "depth": 5
+  }
+ ]
+}

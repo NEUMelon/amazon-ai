@@ -1,0 +1,4 @@
+ab all-same 28 / 30 mean distinct 1.10
+mcts-puct all-same 5 / 30 mean distinct 3.00
+mcts-cutoff all-same 9 / 30 mean distinct 2.30
+mcts-learned all-same 6 / 30 mean distinct 2.80

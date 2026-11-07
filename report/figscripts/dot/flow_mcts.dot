@@ -1,0 +1,14 @@
+digraph G { rankdir=TB; dpi=220; nodesep=0.3; ranksep=0.3;
+ node [fontname="Noto Sans CJK SC", fontsize=10, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#4B5563"]; edge [fontname="Noto Sans CJK SC", fontsize=8.5, color="#4B5563", arrowsize=0.7];
+ s [label="根结点：分隔则交给填格策略；有一步制胜则直接走", fillcolor="#F3E8F7"]; r [label="根结点候选：可分离评估前 K 个 + 先验 softmax(sep/τ)"];
+ l [label="预算未用完？", shape=diamond, fillcolor="#F9FAFB"];
+ sel [label="① 选择子结点\nPUCT：Q + c·P·√N/(1+n)\n（UCT：Q + c·√(ln N / n)）", fillcolor="#FBEFE7"];
+ t [label="当前结点（从根开始）：\n子结点数 < ⌈C·N^α⌉ 且仍有候选？", shape=diamond, fillcolor="#F9FAFB"];
+ ex [label="② 扩展：按候选顺序展开下一个子结点\n（首次访问时计算候选与先验）", fillcolor="#FBEFE7"];
+ d [label="终局 / 已分隔？", shape=diamond, fillcolor="#F9FAFB"];
+ ro [label="③ 模拟：随机走 L 步\n→ p = σ(k·E(s))", fillcolor="#FBEFE7"];
+ v [label="终局：胜负确定\n分隔：按区域格数判胜负"];
+ bp [label="④ 回传：N+1，W 按“走入该结点的一方”累加，逐层翻转", fillcolor="#FBEFE7"];
+ e [label="选访问次数最多的根子结点\n返回访问次数、胜率、先验、主变例", shape=oval, fillcolor="#E8EEF6"];
+ s -> r -> l; l -> t [label="是"]; t -> ex [label="是"]; t -> sel [label="否"]; sel -> t [label="进入所选子结点"]; ex -> d; d -> v [label="是"]; d -> ro [label="否"]; ro -> bp; v -> bp; bp -> l; l -> e [label="否"];
+}

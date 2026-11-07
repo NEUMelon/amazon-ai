@@ -1,0 +1,13 @@
+digraph G { rankdir=TB; dpi=220; nodesep=0.3; ranksep=0.28;
+ node [fontname="Noto Sans CJK SC", fontsize=10, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#4B5563"]; edge [fontname="Noto Sans CJK SC", fontsize=8.5, color="#4B5563", arrowsize=0.7];
+ s [label="开始：收到局面 s", shape=oval, fillcolor="#E8EEF6"];
+ d1 [label="双方已分隔？", shape=diamond, fillcolor="#F9FAFB"]; o1 [label="填格策略：\n己方可达格最多", fillcolor="#F3E8F7"];
+ g [label="根候选：可分离评估取前 60\n→ 逐一静态评估 → 保留前 30"];
+ it [label="迭代加深 depth = 1, 2, …\n上一层最佳着法排第一，PVS 搜索根候选", fillcolor="#E8EEF6"];
+ n [label="内部结点：置换表 → 分隔/终局判断\n→ 候选（可分离前 8；叶前廉价前 24）\n→ 杀手/历史重排 → PVS 递归", fillcolor="#F9FAFB"];
+ d6 [label="找到胜负 / 超时 /\n用时 > 50% 预算？", shape=diamond, fillcolor="#F9FAFB"];
+ p [label="超时：若本层已有完整搜索的\n根着法，采用其中最佳"];
+ e [label="返回最佳着法、分数、主变例\n与每层迭代信息", shape=oval, fillcolor="#E8EEF6"];
+ s -> d1; d1 -> o1 [label="是"]; d1 -> g [label="否"]; g -> it; it -> n [style=dashed, label="递归"]; it -> d6; d6 -> it [label="否，depth+1"]; d6 -> p [label="超时"]; d6 -> e [label="是"]; p -> e;
+ {rank=same; d1; o1} {rank=same; it; n}
+}
